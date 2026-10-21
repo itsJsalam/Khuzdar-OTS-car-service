@@ -68,6 +68,39 @@ internal object SupabaseApi {
         val photoPaths: List<String>
     )
 
+    /**
+     * Starts Google OAuth with PKCE. Google OAuth itself has no per-login fee,
+     * but the Google provider and redirect URL must be configured in Supabase first.
+     */
+    fun beginGoogleOAuth(context: Context): String {
+        val random = java.security.SecureRandom()
+        val bytes = ByteArray(32)
+        random.nextBytes(bytes)
+        val verifier = android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII))
+        val challenge = android.util.Base64.encodeToString(digest, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+        context.getSharedPreferences("ots_settings", Context.MODE_PRIVATE).edit().putString("oauth_pkce_verifier", verifier).apply()
+        val redirect = java.net.URLEncoder.encode("ots-transport://auth-callback", "UTF-8")
+        return "$BASE_URL/auth/v1/authorize?provider=google&redirect_to=$redirect&code_challenge=$challenge&code_challenge_method=s256"
+    }
+
+    suspend fun completeGoogleOAuth(context: Context, callback: Uri): Session = withContext(Dispatchers.IO) {
+        val oauthError = callback.getQueryParameter("error_description") ?: callback.getQueryParameter("error")
+        if (!oauthError.isNullOrBlank()) throw IllegalStateException(oauthError)
+        val code = callback.getQueryParameter("code").orEmpty()
+        if (code.isBlank()) throw IllegalStateException("Google sign-in did not return an authorization code. Check the Supabase OAuth redirect settings.")
+        val verifier = context.getSharedPreferences("ots_settings", Context.MODE_PRIVATE).getString("oauth_pkce_verifier", null)
+            ?: throw IllegalStateException("The Google sign-in session expired. Please try again.")
+        val json = JSONObject(request(
+            "/auth/v1/token?grant_type=pkce",
+            "POST",
+            body = JSONObject().put("auth_code", code).put("code_verifier", verifier)
+        ))
+        val user = json.optJSONObject("user") ?: throw IllegalStateException("Google sign-in did not return a user.")
+        context.getSharedPreferences("ots_settings", Context.MODE_PRIVATE).edit().remove("oauth_pkce_verifier").apply()
+        Session(user.getString("id"), user.optString("email", ""), json.getString("access_token"), json.optString("refresh_token"))
+    }
+
     suspend fun signUp(email: String, password: String): Pair<Session?, String> = withContext(Dispatchers.IO) {
         val response = request(
             "/auth/v1/signup",
