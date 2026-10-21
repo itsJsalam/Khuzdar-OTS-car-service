@@ -231,6 +231,7 @@ private fun OTSApp(
                         }, color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+                Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     showTicket -> TicketScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
                     tab == "Rides" -> RidesScreen(isUrdu = language == "ur", route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
@@ -378,7 +379,8 @@ private fun OTSApp(
                             }
                         }
                     )
-                    else -> HomeScreen(isUrdu = language == "ur", role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" })
+                    else -> HomeScreen(isUrdu = language == "ur", role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" }, onAccount = { chosenRole, signup -> role = chosenRole; authIsSignup = signup; authMessage = ""; showOtp = true })
+                }
                 }
                 if (!showTicket && tab != "Seat") {
                     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -411,6 +413,11 @@ private fun OTSApp(
                         OutlinedTextField(value = authEmail, onValueChange = { authEmail = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         OutlinedTextField(value = authPassword, onValueChange = { authPassword = it }, label = { Text("Password (at least 6 characters)") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
                         if (authMessage.isNotBlank()) Text(authMessage, color = if (authMessage.startsWith("Account created")) Color(0xFF14785E) else Color(0xFF9A4D20), fontSize = 12.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) {
+                                Text(if (language == "ur") { if (authIsSignup) "میرا اکاؤنٹ موجود ہے؟ سائن اِن" else "نیا اکاؤنٹ بنائیں" } else { if (authIsSignup) "Already have an account? Sign in" else "New here? Create an account" })
+                            }
+                        }
                         if (authBusy) Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)); Text("Connecting securely…", fontSize = 12.sp) }
                     }
                 },
@@ -478,10 +485,7 @@ private fun OTSApp(
                     }
                 },
                 dismissButton = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) { Text(if (language == "ur") { if (authIsSignup) "میرا اکاؤنٹ موجود ہے" else "اکاؤنٹ بنائیں" } else { if (authIsSignup) "I have an account" else "Create account" }) }
-                        TextButton(enabled = !authBusy, onClick = { showOtp = false }) { Text(if (language == "ur") "واپس" else "Back") }
-                    }
+                    TextButton(enabled = !authBusy, onClick = { showOtp = false }) { Text(if (language == "ur") "واپس" else "Back") }
                 }
             )
             if (notice.isNotBlank()) AlertDialog(onDismissRequest = { notice = "" }, title = { Text("OTS Transport") }, text = { Text(notice) }, confirmButton = { TextButton(onClick = { notice = "" }) { Text(if (language == "ur") "ٹھیک ہے" else "OK") } })
@@ -567,7 +571,7 @@ private fun toDepartureIso(date: String, time: String): String? {
 }
 
 @Composable
-private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit) {
+private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit, onAccount: (String, Boolean) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Paper)) {
         Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Ink, Navy2, Color(0xFF23536A)))).padding(start = 22.dp, end = 22.dp, top = 24.dp, bottom = 28.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -590,6 +594,14 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoleChip(if (isUrdu) "مسافر" else "Passenger", role == "Passenger") { onRole("Passenger") }
                     RoleChip(if (isUrdu) "ڈرائیور" else "Driver", role == "Driver") { onRole("Driver"); onDriver() }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Button(onClick = { onAccount("Passenger", false) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "مسافر لاگ اِن" else "Passenger Login", fontSize = 11.sp)
+                    }
+                    OutlinedButton(onClick = { onAccount("Passenger", true) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                        Text(if (isUrdu) "اکاؤنٹ بنائیں" else "Sign Up", fontSize = 11.sp)
+                    }
                 }
             }
         }
