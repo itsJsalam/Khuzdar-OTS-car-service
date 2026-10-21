@@ -211,11 +211,11 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                         trips = driverTrips,
                         vehicle = registeredVehicle,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
-                        onUpdateVehicle = { vehicle, make, model, year, plate, color, seats, luggageCapacity, photo ->
+                        onUpdateVehicle = { vehicle, make, model, year, plate, color, seats, luggageCapacity, photos ->
                             val active = session
                             if (active != null) scope.launch {
                                 try {
-                                    SupabaseApi.updateRegisteredVehicle(active, vehicle.id, make, model, year, plate, color, seats, luggageCapacity, appContext, photo)
+                                    SupabaseApi.updateRegisteredVehicle(active, vehicle.id, make, model, year, plate, color, seats, luggageCapacity, appContext, photos)
                                     driverStatus = "pending"
                                     registeredVehicle = SupabaseApi.getRegisteredVehicle(active)
                                     driverTrips = emptyList()
@@ -279,7 +279,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                 }
                             }
                         },
-                        onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity, driverPhoto, cnicDocument, vehiclePhoto ->
+                        onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity, driverPhoto, cnicDocument, vehiclePhotos ->
                             val active = session
                             if (active == null) {
                                 authMessage = "Please sign in first."
@@ -288,7 +288,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                 scope.launch {
                                     driverStatus = "submitting"
                                     try {
-                                        SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity, appContext, driverPhoto, cnicDocument, vehiclePhoto)
+                                        SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity, appContext, driverPhoto, cnicDocument, vehiclePhotos)
                                         driverStatus = "pending"
                                         notice = "Your driver and one-car application has been submitted. You cannot publish trips until the administrator approves it."
                                     } catch (e: Exception) {
@@ -683,7 +683,7 @@ private fun DriverScreen(
     trips: List<SupabaseApi.Trip>,
     vehicle: SupabaseApi.Vehicle?,
     onLogin: () -> Unit,
-    onUpdateVehicle: (SupabaseApi.Vehicle, String, String, Int, String, String, Int, String, Uri?) -> Unit,
+    onUpdateVehicle: (SupabaseApi.Vehicle, String, String, Int, String, String, Int, String, List<Uri>) -> Unit,
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
     onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
     onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
@@ -707,8 +707,8 @@ private fun DriverScreen(
     var tripSeats by remember { mutableStateOf("3") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
     var editVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
-    var replacementVehiclePhoto by remember { mutableStateOf<Uri?>(null) }
-    val editVehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { replacementVehiclePhoto = it }
+    var replacementVehiclePhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val editVehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { replacementVehiclePhotos = it.take(5) }
     LaunchedEffect(vehicle?.id, status) {
         if (vehicle != null && (status == "pending" || status == "rejected")) {
             make = vehicle.make; model = vehicle.model; year = vehicle.year.toString()
@@ -778,11 +778,11 @@ private fun DriverScreen(
                 Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) "Choose CNIC image / PDF" else "CNIC document selected")
             }
             OutlinedButton(onClick = { vehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhoto == null) "Choose car exterior photo" else "Car photo selected")
+                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) "Choose car photos (up to 5)" else "${vehiclePhotos.size} car photos selected")
             }
             Button(
-                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage, driverPhoto, cnicDocument, vehiclePhoto) },
-                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhoto != null && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
+                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
@@ -797,7 +797,7 @@ private fun DriverScreen(
                             editVehicle = vehicle
                             make = vehicle.make; model = vehicle.model; year = vehicle.year.toString()
                             plate = vehicle.registration; color = vehicle.color; seats = vehicle.seats.toString(); luggage = vehicle.luggageCapacity
-                            replacementVehiclePhoto = null
+                            replacementVehiclePhotos = emptyList()
                         }, modifier = Modifier.fillMaxWidth()) { Text("Correct vehicle details") }
                     }
                 }
@@ -874,14 +874,14 @@ private fun DriverScreen(
                     OutlinedTextField(seats, { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, singleLine = true)
                     OutlinedTextField(luggage, { luggage = it }, label = { Text("Luggage capacity") }, singleLine = true)
                     OutlinedButton(onClick = { editVehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (replacementVehiclePhoto == null) "Replace car photo (optional)" else "Replacement photo selected")
+                        Text(if (replacementVehiclePhotos.isEmpty()) "Replace car photos (optional, up to 5)" else "${replacementVehiclePhotos.size} replacement photos selected")
                     }
                 }
             },
             confirmButton = {
                 Button(
                     enabled = make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
-                    onClick = { editVehicle?.let { onUpdateVehicle(it, make, model, year.toIntOrNull() ?: 2020, plate, color, seats.toIntOrNull() ?: 3, luggage, replacementVehiclePhoto) }; editVehicle = null },
+                    onClick = { editVehicle?.let { onUpdateVehicle(it, make, model, year.toIntOrNull() ?: 2020, plate, color, seats.toIntOrNull() ?: 3, luggage, replacementVehiclePhotos) }; editVehicle = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Ink)
                 ) { Text("Submit for reapproval") }
             },
