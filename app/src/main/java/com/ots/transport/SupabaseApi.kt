@@ -38,7 +38,9 @@ internal object SupabaseApi {
         val dropoffPoint: String,
         val departureAt: String,
         val farePkr: Int,
-        val availableSeats: Int
+        val availableSeats: Int,
+        val totalSeats: Int = 0,
+        val status: String = "published"
     )
 
     data class Booking(
@@ -211,7 +213,7 @@ internal object SupabaseApi {
             "UTF-8"
         )
         val response = request(
-            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
+            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
             "GET",
             token = session?.accessToken
         )
@@ -226,7 +228,9 @@ internal object SupabaseApi {
                 dropoffPoint = row.getString("dropoff_point"),
                 departureAt = row.getString("departure_at"),
                 farePkr = row.getInt("fare_pkr"),
-                availableSeats = row.getInt("available_seats")
+                availableSeats = row.getInt("available_seats"),
+                totalSeats = row.optInt("total_seats"),
+                status = row.optString("status", "published")
             )
         }
     }
@@ -318,6 +322,41 @@ internal object SupabaseApi {
             "PATCH",
             token = session.accessToken,
             body = JSONObject().put("status", "cancel_requested"),
+            prefer = "return=minimal"
+        )
+        Unit
+    }
+
+    suspend fun getDriverTrips(session: Session): List<Trip> = withContext(Dispatchers.IO) {
+        val response = request(
+            "/rest/v1/trips?driver_id=eq.${session.userId}&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
+            "GET",
+            token = session.accessToken
+        )
+        val rows = JSONArray(response)
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            Trip(
+                id = row.getString("id"),
+                origin = row.getString("origin"),
+                destination = row.getString("destination"),
+                pickupPoint = row.getString("pickup_point"),
+                dropoffPoint = row.getString("dropoff_point"),
+                departureAt = row.getString("departure_at"),
+                farePkr = row.getInt("fare_pkr"),
+                availableSeats = row.getInt("available_seats"),
+                totalSeats = row.optInt("total_seats"),
+                status = row.optString("status", "published")
+            )
+        }
+    }
+
+    suspend fun cancelTrip(session: Session, tripId: String) = withContext(Dispatchers.IO) {
+        request(
+            "/rest/v1/trips?id=eq.$tripId",
+            "PATCH",
+            token = session.accessToken,
+            body = JSONObject().put("status", "cancelled"),
             prefer = "return=minimal"
         )
         Unit
