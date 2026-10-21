@@ -159,15 +159,18 @@ internal object SupabaseApi {
         context: Context,
         driverPhoto: Uri?,
         cnicDocument: Uri?,
-        vehiclePhoto: Uri?
+        vehiclePhotos: List<Uri>
     ) = withContext(Dispatchers.IO) {
-        if (driverPhoto == null || cnicDocument == null || vehiclePhoto == null) {
+        if (driverPhoto == null || cnicDocument == null || vehiclePhotos.isEmpty()) {
             throw IllegalStateException("Choose a driver photo, a CNIC image/PDF, and at least one car photo before submitting.")
         }
+        if (vehiclePhotos.size > 5) throw IllegalStateException("Choose no more than five car photos.")
         saveProfile(session, name, phone, "Driver")
         val driverPhotoPath = uploadPrivateFile(context, session, "driver-documents", driverPhoto, "driver-photo")
         val cnicDocumentPath = uploadPrivateFile(context, session, "driver-documents", cnicDocument, "cnic-document")
-        val vehiclePhotoPath = uploadPrivateFile(context, session, "vehicle-photos", vehiclePhoto, "vehicle-photo")
+        val vehiclePhotoPaths = vehiclePhotos.mapIndexed { index, uri ->
+            uploadPrivateFile(context, session, "vehicle-photos", uri, "vehicle-photo-${index + 1}")
+        }
         val appPayload = JSONObject()
             .put("user_id", session.userId)
             .put("driver_photo_path", driverPhotoPath)
@@ -190,7 +193,7 @@ internal object SupabaseApi {
             .put("vehicle_type", vehicleType)
             .put("passenger_seats", seats)
             .put("luggage_capacity", luggageCapacity)
-            .put("exterior_photo_paths", JSONArray().put(vehiclePhotoPath))
+            .put("exterior_photo_paths", JSONArray(vehiclePhotoPaths))
             .put("status", "pending")
         request(
             "/rest/v1/vehicles?on_conflict=driver_id",
@@ -309,7 +312,7 @@ internal object SupabaseApi {
         seats: Int,
         luggageCapacity: String,
         context: Context,
-        newPhoto: Uri?
+        newPhotos: List<Uri>
     ) = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("make", make.trim())
@@ -320,9 +323,12 @@ internal object SupabaseApi {
             .put("passenger_seats", seats)
             .put("luggage_capacity", luggageCapacity.trim())
             .put("status", "pending")
-        if (newPhoto != null) {
-            val path = uploadPrivateFile(context, session, "vehicle-photos", newPhoto, "vehicle-photo")
-            payload.put("exterior_photo_paths", JSONArray().put(path))
+        if (newPhotos.isNotEmpty()) {
+            if (newPhotos.size > 5) throw IllegalStateException("Choose no more than five car photos.")
+            val paths = newPhotos.mapIndexed { index, uri ->
+                uploadPrivateFile(context, session, "vehicle-photos", uri, "vehicle-photo-${index + 1}")
+            }
+            payload.put("exterior_photo_paths", JSONArray(paths))
         }
         request(
             "/rest/v1/vehicles?id=eq.$vehicleId",
