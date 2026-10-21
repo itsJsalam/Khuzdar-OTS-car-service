@@ -179,8 +179,8 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                     booked = true
                                     ticketReference = ticketId
                                     ticketFare = fareFor(trip, selectedSeat)
-                                    liveBookings = SupabaseApi.getBookings(active)
                                     showTicket = true
+                                    try { liveBookings = SupabaseApi.getBookings(active) } catch (e: Exception) { bookingsError = e.message ?: "Your booking is saved, but booking history could not refresh yet." }
                                     notice = "Your booking is confirmed. Ticket reference: " + ticketId.take(8).uppercase()
                                 } catch (e: Exception) {
                                     notice = e.message ?: "The booking could not be completed. Please try again."
@@ -271,8 +271,8 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                         val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your car has not been approved yet.")
                                         if (seats > vehicle.passengerSeats) throw IllegalStateException("This car is approved for only ${vehicle.passengerSeats} passenger seats.")
                                         val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, fare, seats)
-                                        driverTrips = SupabaseApi.getDriverTrips(active)
                                         notice = "Trip published successfully. Reference: " + tripId.take(8).uppercase()
+                                        try { driverTrips = SupabaseApi.getDriverTrips(active) } catch (_: Exception) { }
                                     } catch (e: Exception) {
                                         notice = e.message ?: "The trip could not be published."
                                     }
