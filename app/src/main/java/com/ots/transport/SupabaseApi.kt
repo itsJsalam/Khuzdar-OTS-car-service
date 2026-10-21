@@ -351,6 +351,33 @@ internal object SupabaseApi {
         }
     }
 
+    suspend fun updateTrip(
+        session: Session,
+        tripId: String,
+        destination: String,
+        pickup: String,
+        dropoff: String,
+        departureAt: String,
+        farePkr: Int,
+        seats: Int
+    ) = withContext(Dispatchers.IO) {
+        request(
+            "/rest/v1/trips?id=eq.$tripId",
+            "PATCH",
+            token = session.accessToken,
+            body = JSONObject()
+                .put("destination", destination)
+                .put("pickup_point", pickup.trim())
+                .put("dropoff_point", dropoff.trim())
+                .put("departure_at", departureAt)
+                .put("fare_pkr", farePkr)
+                .put("total_seats", seats)
+                .put("available_seats", seats),
+            prefer = "return=minimal"
+        )
+        Unit
+    }
+
     suspend fun cancelTrip(session: Session, tripId: String) = withContext(Dispatchers.IO) {
         request(
             "/rest/v1/trips?id=eq.$tripId",
