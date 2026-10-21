@@ -508,8 +508,8 @@ internal object SupabaseApi {
         val mimeType = context.contentResolver.getType(uri)
             ?: throw IllegalStateException("The selected file type could not be identified.")
         val allowed = when (bucket) {
-            "driver-documents" -> mimeType in setOf("image/jpeg", "image/png", "image/webp", "application/pdf")
-            "vehicle-photos" -> mimeType in setOf("image/jpeg", "image/png", "image/webp")
+            "driver-documents" -> mimeType in setOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf")
+            "vehicle-photos" -> mimeType in setOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif")
             else -> false
         }
         if (!allowed) throw IllegalStateException("Please choose a supported image or PDF file.")
@@ -520,6 +520,8 @@ internal object SupabaseApi {
             "image/jpeg" -> "jpg"
             "image/png" -> "png"
             "image/webp" -> "webp"
+            "image/heic" -> "heic"
+            "image/heif" -> "heif"
             "application/pdf" -> "pdf"
             else -> "bin"
         }
