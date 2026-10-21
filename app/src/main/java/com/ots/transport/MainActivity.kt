@@ -332,7 +332,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                             }
                         }
                     )
-                    else -> HomeScreen(role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" })
+                    else -> HomeScreen(isUrdu = language == "ur", role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" })
                 }
                 if (!showTicket && tab != "Seat") {
                     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -504,48 +504,48 @@ private fun toDepartureIso(date: String, time: String): String? {
 }
 
 @Composable
-private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit) {
+private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Paper)) {
         Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Ink, Navy2, Color(0xFF23536A)))).padding(start = 22.dp, end = 22.dp, top = 24.dp, bottom = 28.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Gold, Color(0xFFFFE7B6)))), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Ink, modifier = Modifier.size(27.dp)) }
                     Spacer(Modifier.width(11.dp))
-                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text("Khuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text(if (isUrdu) "خضدار • شہروں کے درمیان سفر" else "Khuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
                     Spacer(Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("YOUR NEXT JOURNEY", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Text(if (isUrdu) "آپ کا اگلا سفر" else "YOUR NEXT JOURNEY", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                         Spacer(Modifier.height(8.dp))
-                        Text("The road is\nyours.", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 37.sp)
+                        Text(if (isUrdu) "راستہ\nآپ کا ہے۔" else "The road is\nyours.", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 37.sp)
                         Spacer(Modifier.height(7.dp))
-                        Text("Reserve your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
+                        Text(if (isUrdu) "اپنی نشست محفوظ کریں، اعتماد کے ساتھ سفر کریں۔" else "Reserve your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
                     }
                     OtsLogo(78.dp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RoleChip("Passenger", role == "Passenger") { onRole("Passenger") }
-                    RoleChip("Driver", role == "Driver") { onRole("Driver"); onDriver() }
+                    RoleChip(if (isUrdu) "مسافر" else "Passenger", role == "Passenger") { onRole("Passenger") }
+                    RoleChip(if (isUrdu) "ڈرائیور" else "Driver", role == "Driver") { onRole("Driver"); onDriver() }
                 }
             }
         }
         Column(Modifier.padding(horizontal = 18.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Where to?", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold); Text("Choose your route from Khuzdar", color = Muted, fontSize = 12.sp) }; Text("4 ROUTES", color = Navy2, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
-            val routes = listOf(Triple("Karachi", "Coastal metropolis", Icons.Default.LocationCity), Triple("Quetta", "Mountain gateway", Icons.Default.Terrain), Triple("Sindh", "Larkana • Ratto Dero", Icons.Default.Route), Triple("Makran", "Turbat • Gwadar", Icons.Default.Waves))
+            Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(if (isUrdu) "کہاں جانا ہے؟" else "Where to?", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "خضدار سے اپنا راستہ منتخب کریں" else "Choose your route from Khuzdar", color = Muted, fontSize = 12.sp) }; Text(if (isUrdu) "۴ راستے" else "4 ROUTES", color = Navy2, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            val routes = if (isUrdu) listOf(Triple("Karachi", "ساحلی شہر", Icons.Default.LocationCity), Triple("Quetta", "پہاڑی راستہ", Icons.Default.Terrain), Triple("Sindh", "لاڑکانہ • رتو ڈیرو", Icons.Default.Route), Triple("Makran", "تربت • گوادر", Icons.Default.Waves)) else listOf(Triple("Karachi", "Coastal metropolis", Icons.Default.LocationCity), Triple("Quetta", "Mountain gateway", Icons.Default.Terrain), Triple("Sindh", "Larkana • Ratto Dero", Icons.Default.Route), Triple("Makran", "Turbat • Gwadar", Icons.Default.Waves))
             routes.forEachIndexed { index, route ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White).clickable { onRoute(if (route.first == "Sindh") "Larkana" else if (route.first == "Makran") "Gwadar" else route.first) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(listOf(Color(0xFFFFF0D7), Color(0xFFE1F4F1), Color(0xFFE8ECFF), Color(0xFFE7F0F8))[index]), contentAlignment = Alignment.Center) { Icon(route.third, null, tint = Navy2, modifier = Modifier.size(24.dp)) }
                     Spacer(Modifier.width(13.dp))
-                    Column(Modifier.weight(1f)) { Text("Khuzdar → ${route.first}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(route.second, color = Muted, fontSize = 11.sp) }
+                    Column(Modifier.weight(1f)) { Text((if (isUrdu) "خضدار → " else "Khuzdar → ") + route.first, color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(route.second, color = Muted, fontSize = 11.sp) }
                     Icon(Icons.Default.ArrowForward, null, tint = Navy2)
                 }
             }
-            Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Find available rides", fontWeight = FontWeight.Bold) }
+            Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "دستیاب سفر تلاش کریں" else "Find available rides", fontWeight = FontWeight.Bold) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatCard("4", "Routes", Icons.Default.Route, Modifier.weight(1f))
-                StatCard("OTS", "Driver review", Icons.Default.Verified, Modifier.weight(1f))
-                StatCard("PKR", "Clear fares", Icons.Default.Payments, Modifier.weight(1f))
+                StatCard("4", if (isUrdu) "راستے" else "Routes", Icons.Default.Route, Modifier.weight(1f))
+                StatCard("OTS", if (isUrdu) "ڈرائیور کی جانچ" else "Driver review", Icons.Default.Verified, Modifier.weight(1f))
+                StatCard("PKR", if (isUrdu) "واضح کرایہ" else "Clear fares", Icons.Default.Payments, Modifier.weight(1f))
             }
         }
     }
