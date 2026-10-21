@@ -68,6 +68,11 @@ private fun OTSApp() {
     var booked by remember { mutableStateOf(false) }
     var showOtp by remember { mutableStateOf(false) }
     var showTicket by remember { mutableStateOf(false) }
+    var ticketReference by remember { mutableStateOf("") }
+    var ticketFare by remember { mutableStateOf(0) }
+    var liveBookings by remember { mutableStateOf<List<SupabaseApi.Booking>>(emptyList()) }
+    var bookingsLoading by remember { mutableStateOf(false) }
+    var bookingsError by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     var authEmail by remember { mutableStateOf("") }
     var authPassword by remember { mutableStateOf("") }
