@@ -71,6 +71,8 @@ private val sampleRides = listOf(
 private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
+    var language by remember { mutableStateOf("") }
+    var showLanguagePicker by remember { mutableStateOf(false) }
     var selectedRoute by remember { mutableStateOf("Karachi") }
     var selectedRide by remember { mutableStateOf<Ride?>(null) }
     var selectedSeat by remember { mutableStateOf("Seat 1") }
@@ -101,6 +103,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var tripsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
+    LaunchedEffect(appContext) { language = appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).getString("language", "").orEmpty() }
 
     LaunchedEffect(Unit) {
         val stored = initialSession
@@ -154,10 +157,19 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
         }
     }
     androidx.activity.compose.BackHandler(enabled = showTicket) { showTicket = false; tab = "Bookings" }
+    androidx.activity.compose.BackHandler(enabled = showOtp && !authBusy) { showOtp = false }
     androidx.activity.compose.BackHandler(enabled = tab == "Seat" && !showTicket) { tab = "Rides" }
+    androidx.activity.compose.BackHandler(enabled = !showTicket && !showOtp && tab != "Seat" && (tab != "Home" || role == "Driver")) {
+        if (tab != "Home") tab = "Home" else role = "Passenger"
+    }
 
     MaterialTheme(
-        colorScheme = darkColorScheme(primary = Gold, secondary = Mint, background = Ink, surface = Navy, onPrimary = Ink, onBackground = Color.White, onSurface = Color.White)
+        // Dark entered text and readable grey placeholders on white surfaces.
+        colorScheme = lightColorScheme(
+            primary = Ink, secondary = Mint, background = Paper, surface = Color.White,
+            onPrimary = Color.White, onBackground = Ink, onSurface = Ink,
+            onSurfaceVariant = Color(0xFF4B5563), outline = Color(0xFF667085)
+        )
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Paper) {
             Column(Modifier.fillMaxSize()) {
