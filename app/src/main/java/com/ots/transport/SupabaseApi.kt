@@ -165,11 +165,11 @@ internal object SupabaseApi {
         if (rows.length() == 0) "not_submitted" else rows.getJSONObject(0).optString("status", "pending")
     }
 
-    suspend fun getApprovedTrips(session: Session): List<Trip> = withContext(Dispatchers.IO) {
+    suspend fun getApprovedTrips(session: Session? = null): List<Trip> = withContext(Dispatchers.IO) {
         val response = request(
             "/rest/v1/trips?status=eq.published&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
             "GET",
-            token = session.accessToken
+            token = session?.accessToken
         )
         val rows = JSONArray(response)
         (0 until rows.length()).map { i ->
@@ -185,6 +185,26 @@ internal object SupabaseApi {
                 availableSeats = row.getInt("available_seats")
             )
         }
+    }
+
+    suspend fun createBooking(session: Session, tripId: String, seatLabel: String, farePkr: Int): String = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("passenger_id", session.userId)
+            .put("trip_id", tripId)
+            .put("seat_labels", JSONArray().put(seatLabel))
+            .put("passenger_count", 1)
+            .put("fare_total_pkr", farePkr)
+            .put("status", "confirmed")
+        val response = request(
+            "/rest/v1/bookings",
+            "POST",
+            token = session.accessToken,
+            body = payload,
+            prefer = "return=representation"
+        )
+        val rows = JSONArray(response)
+        if (rows.length() == 0) throw IllegalStateException("The booking service did not return a ticket.")
+        rows.getJSONObject(0).getString("id")
     }
 
     private fun uploadPrivateFile(
