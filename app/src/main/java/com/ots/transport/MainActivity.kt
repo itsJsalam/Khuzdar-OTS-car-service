@@ -62,7 +62,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var tab by remember { mutableStateOf("Home") }
     var selectedRoute by remember { mutableStateOf("Karachi") }
     var selectedRide by remember { mutableStateOf<Ride?>(null) }
-    var selectedSeat by remember { mutableStateOf("Rear seat") }
+    var selectedSeat by remember { mutableStateOf("Seat 1") }
     var selectedDrop by remember { mutableStateOf("Karachi") }
     var luggage by remember { mutableStateOf("Small bag") }
     var booked by remember { mutableStateOf(false) }
@@ -152,7 +152,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
             Column(Modifier.fillMaxSize()) {
                 when {
                     showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
-                    tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; tab = "Seat" })
+                    tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
                     tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
                         val trip = selectedRide
                         val active = session
