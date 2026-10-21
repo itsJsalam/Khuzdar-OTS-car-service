@@ -687,7 +687,7 @@ private fun DriverScreen(
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
     onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
     onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
-    onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, Uri?) -> Unit
+    onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, List<Uri>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -725,9 +725,9 @@ private fun DriverScreen(
     var editSeats by remember { mutableStateOf("") }
     var driverPhoto by remember { mutableStateOf<Uri?>(null) }
     var cnicDocument by remember { mutableStateOf<Uri?>(null) }
-    var vehiclePhoto by remember { mutableStateOf<Uri?>(null) }
+    var vehiclePhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val driverPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { driverPhoto = it }
-    val vehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { vehiclePhoto = it }
+    val vehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { vehiclePhotos = it.take(5) }
     val cnicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { cnicDocument = it }
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
