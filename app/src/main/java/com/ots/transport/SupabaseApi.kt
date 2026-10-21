@@ -1,5 +1,7 @@
 package com.ots.transport
 
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -106,11 +108,23 @@ internal object SupabaseApi {
         color: String,
         seats: Int,
         vehicleType: String,
-        luggageCapacity: String
+        luggageCapacity: String,
+        context: Context,
+        driverPhoto: Uri?,
+        cnicDocument: Uri?,
+        vehiclePhoto: Uri?
     ) = withContext(Dispatchers.IO) {
+        if (driverPhoto == null || cnicDocument == null || vehiclePhoto == null) {
+            throw IllegalStateException("Choose a driver photo, a CNIC image/PDF, and at least one car photo before submitting.")
+        }
         saveProfile(session, name, phone, "Driver")
+        val driverPhotoPath = uploadPrivateFile(context, session, "driver-documents", driverPhoto, "driver-photo")
+        val cnicDocumentPath = uploadPrivateFile(context, session, "driver-documents", cnicDocument, "cnic-document")
+        val vehiclePhotoPath = uploadPrivateFile(context, session, "vehicle-photos", vehiclePhoto, "vehicle-photo")
         val appPayload = JSONObject()
             .put("user_id", session.userId)
+            .put("driver_photo_path", driverPhotoPath)
+            .put("cnic_document_path", cnicDocumentPath)
             .put("status", "pending")
         request(
             "/rest/v1/driver_applications?on_conflict=user_id",
@@ -129,6 +143,7 @@ internal object SupabaseApi {
             .put("vehicle_type", vehicleType)
             .put("passenger_seats", seats)
             .put("luggage_capacity", luggageCapacity)
+            .put("exterior_photo_paths", JSONArray().put(vehiclePhotoPath))
             .put("status", "pending")
         request(
             "/rest/v1/vehicles?on_conflict=driver_id",
@@ -169,6 +184,56 @@ internal object SupabaseApi {
                 farePkr = row.getInt("fare_pkr"),
                 availableSeats = row.getInt("available_seats")
             )
+        }
+    }
+
+    private fun uploadPrivateFile(
+        context: Context,
+        session: Session,
+        bucket: String,
+        uri: Uri,
+        label: String
+    ): String {
+        val mimeType = context.contentResolver.getType(uri)
+            ?: throw IllegalStateException("The selected file type could not be identified.")
+        val allowed = when (bucket) {
+            "driver-documents" -> mimeType in setOf("image/jpeg", "image/png", "image/webp", "application/pdf")
+            "vehicle-photos" -> mimeType in setOf("image/jpeg", "image/png", "image/webp")
+            else -> false
+        }
+        if (!allowed) throw IllegalStateException("Please choose a supported image or PDF file.")
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw IllegalStateException("The selected file could not be opened.")
+        if (bytes.size > 10 * 1024 * 1024) throw IllegalStateException("Each upload must be smaller than 10 MB.")
+        val extension = when (mimeType) {
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "application/pdf" -> "pdf"
+            else -> "bin"
+        }
+        val objectPath = "\${session.userId}/\${label}-\${System.currentTimeMillis()}.\$extension"
+        val connection = (URL("\$BASE_URL/storage/v1/object/\$bucket/\$objectPath").openConnection() as HttpURLConnection)
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 20000
+            connection.readTimeout = 20000
+            connection.doOutput = true
+            connection.setRequestProperty("apikey", PUBLIC_KEY)
+            connection.setRequestProperty("Authorization", "Bearer \${session.accessToken}")
+            connection.setRequestProperty("Content-Type", mimeType)
+            connection.setRequestProperty("x-upsert", "true")
+            connection.outputStream.use { it.write(bytes) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) {
+                val message = try { JSONObject(response).optString("message").ifBlank { response } } catch (_: Exception) { response }
+                throw IllegalStateException(message.ifBlank { "File upload failed (HTTP \$code)." })
+            }
+            return objectPath
+        } finally {
+            connection.disconnect()
         }
     }
 
