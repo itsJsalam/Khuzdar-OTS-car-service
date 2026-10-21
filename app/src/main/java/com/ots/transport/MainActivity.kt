@@ -209,6 +209,26 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                 }
                             }
                         },
+                        onEditTrip = { trip, destination, pickup, dropoff, date, time, fare, seats ->
+                            val active = session
+                            val departure = toDepartureIso(date, time)
+                            if (active == null) {
+                                authMessage = "Please sign in first."
+                                showOtp = true
+                            } else if (departure == null) {
+                                notice = "Enter a valid future departure date and time."
+                            } else {
+                                scope.launch {
+                                    try {
+                                        SupabaseApi.updateTrip(active, trip.id, destination, pickup, dropoff, departure, fare, seats)
+                                        driverTrips = SupabaseApi.getDriverTrips(active)
+                                        notice = "Trip updated."
+                                    } catch (e: Exception) {
+                                        notice = e.message ?: "Trip changes were blocked. Trips with active bookings need OTS review."
+                                    }
+                                }
+                            }
+                        },
                         onPublishTrip = { destination, pickup, dropoff, date, time, fare, seats ->
                             val active = session
                             val departure = toDepartureIso(date, time)
@@ -634,6 +654,7 @@ private fun DriverScreen(
     trips: List<SupabaseApi.Trip>,
     onLogin: () -> Unit,
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
+    onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
     onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
     onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, Uri?) -> Unit
 ) {
@@ -654,6 +675,14 @@ private fun DriverScreen(
     var tripFare by remember { mutableStateOf("") }
     var tripSeats by remember { mutableStateOf("3") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
+    var editCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
+    var editDestination by remember { mutableStateOf("") }
+    var editPickup by remember { mutableStateOf("") }
+    var editDropoff by remember { mutableStateOf("") }
+    var editDate by remember { mutableStateOf("") }
+    var editTime by remember { mutableStateOf("") }
+    var editFare by remember { mutableStateOf("") }
+    var editSeats by remember { mutableStateOf("") }
     var driverPhoto by remember { mutableStateOf<Uri?>(null) }
     var cnicDocument by remember { mutableStateOf<Uri?>(null) }
     var vehiclePhoto by remember { mutableStateOf<Uri?>(null) }
@@ -750,7 +779,19 @@ private fun DriverScreen(
                         Text("${trip.origin} → ${trip.destination}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(trip.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 11.sp)
                         Text("PKR ${trip.farePkr} • ${trip.availableSeats}/${trip.totalSeats} seats available • ${trip.status.uppercase()}", color = Navy2, fontSize = 11.sp)
-                        if (trip.status == "published") OutlinedButton(onClick = { cancelCandidate = trip }, modifier = Modifier.fillMaxWidth()) { Text("Cancel trip") }
+                        if (trip.status == "published") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { cancelCandidate = trip }, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                            Button(onClick = {
+                                editCandidate = trip
+                                editDestination = trip.destination
+                                editPickup = trip.pickupPoint
+                                editDropoff = trip.dropoffPoint
+                                editDate = trip.departureAt.take(10)
+                                editTime = trip.departureAt.substringAfter("T").take(5)
+                                editFare = trip.farePkr.toString()
+                                editSeats = trip.totalSeats.toString()
+                            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Edit trip") }
+                        }
                     }
                 }
             }
@@ -761,6 +802,32 @@ private fun DriverScreen(
                 Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked")
             }
         }
+    }
+    if (editCandidate != null) {
+        AlertDialog(
+            onDismissRequest = { editCandidate = null },
+            title = { Text("Edit trip details") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(editDestination, { editDestination = it }, label = { Text("Destination") }, singleLine = true)
+                    OutlinedTextField(editPickup, { editPickup = it }, label = { Text("Pickup point") }, singleLine = true)
+                    OutlinedTextField(editDropoff, { editDropoff = it }, label = { Text("Drop-off point") }, singleLine = true)
+                    OutlinedTextField(editDate, { editDate = it.take(10) }, label = { Text("Date (YYYY-MM-DD)") }, singleLine = true)
+                    OutlinedTextField(editTime, { editTime = it.take(5) }, label = { Text("Time (HH:MM)") }, singleLine = true)
+                    OutlinedTextField(editFare, { editFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text("Fare per seat (PKR)") }, singleLine = true)
+                    OutlinedTextField(editSeats, { editSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, singleLine = true)
+                    Text("Trips with active bookings cannot change their route, time, fare or seats. OTS administration must handle those cases.", color = Muted, fontSize = 11.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = editDestination.isNotBlank() && editPickup.isNotBlank() && editDropoff.isNotBlank() && (editFare.toIntOrNull() ?: 0) > 0 && (editSeats.toIntOrNull() ?: 0) in 1..20,
+                    onClick = { editCandidate?.let { onEditTrip(it, editDestination, editPickup, editDropoff, editDate, editTime, editFare.toIntOrNull() ?: 0, editSeats.toIntOrNull() ?: 0) }; editCandidate = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink)
+                ) { Text("Save changes") }
+            },
+            dismissButton = { TextButton(onClick = { editCandidate = null }) { Text("Back") } }
+        )
     }
     if (cancelCandidate != null) {
         AlertDialog(
