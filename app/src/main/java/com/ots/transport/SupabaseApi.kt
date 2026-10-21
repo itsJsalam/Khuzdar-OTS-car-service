@@ -469,13 +469,16 @@ internal object SupabaseApi {
         Unit
     }
 
-    suspend fun createBooking(session: Session, tripId: String, seatLabel: String, farePkr: Int): String = withContext(Dispatchers.IO) {
+    suspend fun createBooking(session: Session, tripId: String, seatLabel: String, farePkr: Int, pickupPoint: String, dropoffPoint: String, luggageType: String): String = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("passenger_id", session.userId)
             .put("trip_id", tripId)
             .put("seat_labels", JSONArray().put(seatLabel))
             .put("passenger_count", 1)
             .put("fare_total_pkr", farePkr)
+            .put("pickup_point", pickupPoint)
+            .put("dropoff_point", dropoffPoint)
+            .put("luggage_type", luggageType)
             .put("status", "confirmed")
         val response = request(
             "/rest/v1/bookings",
