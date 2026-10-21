@@ -232,9 +232,9 @@ private fun OTSApp(
                     }
                 }
                 when {
-                    showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
-                    tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
-                    tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
+                    showTicket -> TicketScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
+                    tab == "Rides" -> RidesScreen(isUrdu = language == "ur", route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
+                    tab == "Seat" -> SeatScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
                         val trip = selectedRide
                         val active = session
                         if (trip?.tripId == null) {
@@ -258,7 +258,7 @@ private fun OTSApp(
                             }
                         }
                     })
-                    tab == "Bookings" -> BookingsScreen(signedIn = session != null, bookings = liveBookings, loading = bookingsLoading, error = bookingsError, onBrowse = { tab = "Rides" }, onLogin = { authMessage = "Sign in to view your bookings."; showOtp = true }, onTicket = { booking ->
+                    tab == "Bookings" -> BookingsScreen(isUrdu = language == "ur", signedIn = session != null, bookings = liveBookings, loading = bookingsLoading, error = bookingsError, onBrowse = { tab = "Rides" }, onLogin = { authMessage = "Sign in to view your bookings."; showOtp = true }, onTicket = { booking ->
                         selectedRide = Ride(booking.destination, "${booking.origin} → ${booking.destination}", booking.departureAt.replace("T", " ").take(16), "OTS vehicle", "OTS driver", booking.fareTotalPkr, 0, "—", booking.status.uppercase(), booking.id)
                         selectedSeat = booking.seatLabels.ifBlank { "Seat assigned by driver" }
                         ticketFare = booking.fareTotalPkr
@@ -274,7 +274,7 @@ private fun OTSApp(
                             } catch (e: Exception) { notice = e.message ?: "Could not request cancellation." }
                         }
                     })
-                    tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
+                    tab == "Profile" -> ProfileScreen(isUrdu = language == "ur", role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
                     tab == "Settings" -> SettingsScreen(
                         isUrdu = language == "ur",
                         signedIn = session != null,
@@ -630,6 +630,7 @@ private fun StatCard(value: String, label: String, icon: androidx.compose.ui.gra
 
 @Composable
 private fun RidesScreen(
+    isUrdu: Boolean,
     route: String,
     trips: List<SupabaseApi.Trip>,
     loading: Boolean,
@@ -638,15 +639,15 @@ private fun RidesScreen(
     onSelect: (Ride) -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Find your ride", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Live trips published by approved OTS drivers", color = Muted, fontSize = 12.sp)
+        Text(if (isUrdu) "اپنا سفر تلاش کریں" else "Find your ride", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (isUrdu) "منظور شدہ OTS ڈرائیوروں کے دستیاب سفر" else "Live trips published by approved OTS drivers", color = Muted, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Karachi", "Quetta", "Larkana", "Gwadar").forEach { city ->
-                FilterChip(selected = route == city, onClick = { onRoute(city) }, label = { Text(city) }, leadingIcon = if (route == city) ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
+                FilterChip(selected = route == city, onClick = { onRoute(city) }, label = { Text(if (isUrdu && city == "All") "تمام" else city) }, leadingIcon = if (route == city) ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
             }
         }
         if (loading) {
-            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(10.dp)); Text("Loading available trips…", color = Muted, fontSize = 12.sp) }
+            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(10.dp)); Text(if (isUrdu) "دستیاب سفر لوڈ ہو رہے ہیں…" else "Loading available trips…", color = Muted, fontSize = 12.sp) }
         } else {
             val filtered = trips.filter { route == "All" || it.destination.equals(route, ignoreCase = true) }
             filtered.forEach { trip ->
@@ -704,12 +705,12 @@ private fun RideCard(ride: Ride, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SeatScreen(ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onBook: () -> Unit) {
+private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onBook: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }; Column { Text("Choose your seat", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold); Text(ride.route, color = Muted, fontSize = 12.sp) } }
+        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }; Column { Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your seat", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold); Text(ride.route, color = Muted, fontSize = 12.sp) } }
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("VEHICLE SEATING PLAN", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                Text(if (isUrdu) "گاڑی میں نشستوں کی ترتیب" else "VEHICLE SEATING PLAN", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.width(260.dp).clip(RoundedCornerShape(28.dp)).background(Color(0xFF203D54)).padding(14.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -722,12 +723,12 @@ private fun SeatScreen(ride: Ride, seat: String, onSeat: (String) -> Unit, drop:
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text("Seat count matches the approved vehicle capacity. The database prevents double-booking a seat.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                        Text(if (isUrdu) "نشستوں کی تعداد منظور شدہ گاڑی کے مطابق ہے۔ ایک نشست دو بار بک نہیں ہو سکتی۔" else "Seat count matches the approved vehicle capacity. The database prevents double-booking a seat.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
                     }
                 }
             }
         }
-        Text("Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(if (isUrdu) "پک اَپ اور منزل" else "Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("PICKUP", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.pickupPoint, color = Ink, fontWeight = FontWeight.SemiBold) }
@@ -736,12 +737,12 @@ private fun SeatScreen(ride: Ride, seat: String, onSeat: (String) -> Unit, drop:
                 Column(Modifier.weight(1f)) { Text("DROP-OFF", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.dropoffPoint ?: ride.city, color = Ink, fontWeight = FontWeight.SemiBold) }
             }
         }
-        Text("Luggage", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(if (isUrdu) "سامان" else "Luggage", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Small bag", "Medium bag", "Large box").forEach { item -> FilterChip(selected = luggage == item, onClick = { onLuggage(item) }, label = { Text(item, fontSize = 11.sp) }) } }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("FARE PER SEAT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text("PKR ${fareFor(ride, seat)}", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black); Text("No online payment is collected in this version.", color = Muted, fontSize = 10.sp) }
-                Button(onClick = onBook, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Book now") }
+                Button(onClick = onBook, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "ابھی بک کریں" else "Book now") }
             }
         }
         Text("Before boarding, compare the driver and car details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
@@ -761,6 +762,7 @@ private fun fareFor(ride: Ride, seat: String): Int = ride.price
 
 @Composable
 private fun BookingsScreen(
+    isUrdu: Boolean,
     signedIn: Boolean,
     bookings: List<SupabaseApi.Booking>,
     loading: Boolean,
@@ -771,8 +773,8 @@ private fun BookingsScreen(
     onCancel: (SupabaseApi.Booking) -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Your bookings", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Bookings and cancellation requests from your OTS account", color = Muted, fontSize = 12.sp)
+        Text(if (isUrdu) "آپ کی بکنگز" else "Your bookings", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (isUrdu) "آپ کے OTS اکاؤنٹ کی بکنگز اور منسوخی کی درخواستیں" else "Bookings and cancellation requests from your OTS account", color = Muted, fontSize = 12.sp)
         if (!signedIn) {
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -814,9 +816,9 @@ private fun BookingsScreen(
 }
 
 @Composable
-private fun TicketScreen(ride: Ride, seat: String, fare: Int, reference: String, onBack: () -> Unit) {
+private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, reference: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }; Text("Digital travel ticket", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold) }
+        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }; Text(if (isUrdu) "ڈیجیٹل سفری ٹکٹ" else "Digital travel ticket", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold) }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp)) {
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1093,9 +1095,9 @@ private fun DriverScreen(
 }
 
 @Composable
-private fun ProfileScreen(role: String, onRole: (String) -> Unit, onLogin: () -> Unit, signedIn: Boolean, email: String, onSignOut: () -> Unit) {
+private fun ProfileScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onLogin: () -> Unit, signedIn: Boolean, email: String, onSignOut: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Your profile", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (isUrdu) "آپ کا پروفائل" else "Your profile", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 OtsLogo(58.dp)
