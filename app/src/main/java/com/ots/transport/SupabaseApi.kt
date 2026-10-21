@@ -167,7 +167,7 @@ internal object SupabaseApi {
 
     suspend fun getApprovedTrips(session: Session): List<Trip> = withContext(Dispatchers.IO) {
         val response = request(
-            "/rest/v1/trips?status=eq.published&departure_at=gt.${java.time.Instant.now()}&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
+            "/rest/v1/trips?status=eq.published&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
             "GET",
             token = session.accessToken
         )
