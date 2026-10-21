@@ -931,7 +931,7 @@ private fun ProfileScreen(role: String, onRole: (String) -> Unit, onLogin: () ->
         Text("Your profile", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(58.dp).clip(CircleShape).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Ink, modifier = Modifier.size(32.dp)) }
+                OtsLogo(58.dp)
                 Spacer(Modifier.width(12.dp)); Column { Text("Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text(if (signedIn) email else "Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
             }
         }
