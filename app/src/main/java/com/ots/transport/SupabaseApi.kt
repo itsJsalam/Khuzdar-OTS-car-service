@@ -212,15 +212,15 @@ internal object SupabaseApi {
             "application/pdf" -> "pdf"
             else -> "bin"
         }
-        val objectPath = "\${session.userId}/\${label}-\${System.currentTimeMillis()}.\$extension"
-        val connection = (URL("\$BASE_URL/storage/v1/object/\$bucket/\$objectPath").openConnection() as HttpURLConnection)
+        val objectPath = session.userId + "/" + label + "-" + System.currentTimeMillis() + "." + extension
+        val connection = (URL(BASE_URL + "/storage/v1/object/" + bucket + "/" + objectPath).openConnection() as HttpURLConnection)
         try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 20000
             connection.readTimeout = 20000
             connection.doOutput = true
             connection.setRequestProperty("apikey", PUBLIC_KEY)
-            connection.setRequestProperty("Authorization", "Bearer \${session.accessToken}")
+            connection.setRequestProperty("Authorization", "Bearer " + session.accessToken)
             connection.setRequestProperty("Content-Type", mimeType)
             connection.setRequestProperty("x-upsert", "true")
             connection.outputStream.use { it.write(bytes) }
@@ -229,7 +229,7 @@ internal object SupabaseApi {
             val response = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (code !in 200..299) {
                 val message = try { JSONObject(response).optString("message").ifBlank { response } } catch (_: Exception) { response }
-                throw IllegalStateException(message.ifBlank { "File upload failed (HTTP \$code)." })
+                throw IllegalStateException(message.ifBlank { "File upload failed (HTTP " + code + ")." })
             }
             return objectPath
         } finally {
