@@ -774,7 +774,7 @@ private fun DriverScreen(
             OutlinedButton(onClick = { driverPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (driverPhoto == null) "Choose driver photo" else "Driver photo selected")
             }
-            OutlinedButton(onClick = { cnicPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { cnicPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) "Choose CNIC image / PDF" else "CNIC document selected")
             }
             OutlinedButton(onClick = { vehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
