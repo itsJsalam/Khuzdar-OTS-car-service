@@ -284,6 +284,7 @@ private fun OTSApp(
                         onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = if (language == "ur") "آپ سائن آؤٹ ہو گئے ہیں۔" else "You have signed out." }
                     )
                     role == "Driver" && tab == "Home" -> DriverScreen(
+                        isUrdu = language == "ur",
                         session = session,
                         status = driverStatus,
                         trips = driverTrips,
@@ -847,6 +848,7 @@ private fun TicketDetail(label: String, value: String) {
 
 @Composable
 private fun DriverScreen(
+    isUrdu: Boolean,
     session: SupabaseApi.Session?,
     status: String,
     trips: List<SupabaseApi.Trip>,
@@ -902,11 +904,11 @@ private fun DriverScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             OtsLogo(38.dp)
             Spacer(Modifier.width(10.dp))
-            Column { Text("Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text("One registered car • multiple routes", color = Muted, fontSize = 12.sp) }
+            Column { Text(if (isUrdu) "ڈرائیور مرکز" else "Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "ایک رجسٹرڈ گاڑی • متعدد راستے" else "One registered car • multiple routes", color = Muted, fontSize = 12.sp) }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("APPLICATION STATUS", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                Text(if (isUrdu) "درخواست کی صورتحال" else "APPLICATION STATUS", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                 Text(when (status) {
                     "approved" -> "Approved — you can prepare trip listings."
                     "pending", "submitting" -> "Pending review — publishing is locked."
@@ -916,7 +918,7 @@ private fun DriverScreen(
                     "unknown" -> "Unable to check status. Try again when connected."
                     else -> "Not registered as a driver yet."
                 }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Trips stay locked until an administrator approves your driver application and car.", color = Color(0xFFB9CBD9), fontSize = 11.sp)
+                Text(if (isUrdu) "ایڈمن کی منظوری تک سفر شائع نہیں کیے جا سکتے۔" else "Trips stay locked until an administrator approves your driver application and car.", color = Color(0xFFB9CBD9), fontSize = 11.sp)
             }
         }
         if (session == null) {
@@ -925,36 +927,36 @@ private fun DriverScreen(
         } else if (status == "not_submitted" || status == "unknown" || status == "pending" || status == "rejected") {
             Text(if (status == "rejected") "Correct and resubmit application" else if (status == "pending") "Update pending application" else "Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Register exactly one car. Your driver photo, CNIC document and car photo are uploaded to private storage for administrator review. Use fictional documents while testing.", color = Muted, fontSize = 12.sp)
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(if (isUrdu) "پورا قانونی نام" else "Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(if (isUrdu) "فون نمبر" else "Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text("Car make") }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text(if (isUrdu) "گاڑی بنانے والی کمپنی" else "Car make") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text(if (isUrdu) "ماڈل" else "Model") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = year, onValueChange = { year = it.filter { c -> c.isDigit() }.take(4) }, label = { Text("Year") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = year, onValueChange = { year = it.filter { c -> c.isDigit() }.take(4) }, label = { Text(if (isUrdu) "سال" else "Year") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = color, onValueChange = { color = it }, label = { Text("Color") }, modifier = Modifier.weight(1f), singleLine = true)
             }
-            OutlinedTextField(value = plate, onValueChange = { plate = it.uppercase() }, label = { Text("Registration number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = plate, onValueChange = { plate = it.uppercase() }, label = { Text(if (isUrdu) "رجسٹریشن نمبر" else "Registration number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text("Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text(if (isUrdu) "مسافروں کی نشستیں" else "Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text(if (isUrdu) "سامان کی گنجائش" else "Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             OutlinedButton(onClick = { driverPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (driverPhoto == null) "Choose driver photo" else "Driver photo selected")
+                Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (driverPhoto == null) { if (isUrdu) "ڈرائیور کی تصویر منتخب کریں" else "Choose driver photo" } else if (isUrdu) "ڈرائیور کی تصویر منتخب ہو گئی" else "Driver photo selected")
             }
             OutlinedButton(onClick = { cnicPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) "Choose CNIC image / PDF" else "CNIC document selected")
+                Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) { if (isUrdu) "شناختی کارڈ کی تصویر / PDF منتخب کریں" else "Choose CNIC image / PDF" } else if (isUrdu) "شناختی دستاویز منتخب ہو گئی" else "CNIC document selected")
             }
             OutlinedButton(onClick = { vehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) "Choose car photos (up to 5)" else "${vehiclePhotos.size} car photos selected")
+                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) { if (isUrdu) "گاڑی کی تصاویر منتخب کریں (زیادہ سے زیادہ ۵)" else "Choose car photos (up to 5)" } else if (isUrdu) "${vehiclePhotos.size} تصاویر منتخب ہوئیں" else "${vehiclePhotos.size} car photos selected")
             }
             Button(
                 onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
                 enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
-            ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
+            ) { Text(if (isUrdu) { if (status == "submitting") "جمع ہو رہا ہے…" else "منظوری کے لیے جمع کریں" } else { if (status == "submitting") "Submitting…" else "Submit for approval" }) }
         } else if (status == "approved") {
             if (vehicle != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
@@ -971,22 +973,22 @@ private fun DriverScreen(
                     }
                 }
             }
-            Text("Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text(if (isUrdu) "سفر شائع کریں" else "Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Your approved car will be used for every route. You can publish multiple trips with different schedules.", color = Muted, fontSize = 12.sp)
-            Text("Destination", color = Ink, fontWeight = FontWeight.Bold)
+            Text(if (isUrdu) "منزل" else "Destination", color = Ink, fontWeight = FontWeight.Bold)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("Karachi", "Quetta", "Larkana", "Gwadar", "Turbat", "Ratto Dero").forEach { city ->
                     FilterChip(selected = destination == city, onClick = { destination = city; dropoffPoint = city }, label = { Text(city) })
                 }
             }
-            OutlinedTextField(value = pickupPoint, onValueChange = { pickupPoint = it }, label = { Text("Pickup point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = dropoffPoint, onValueChange = { dropoffPoint = it }, label = { Text("Drop-off point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = pickupPoint, onValueChange = { pickupPoint = it }, label = { Text(if (isUrdu) "پک اَپ کی جگہ" else "Pickup point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = dropoffPoint, onValueChange = { dropoffPoint = it }, label = { Text(if (isUrdu) "اترنے کی جگہ" else "Drop-off point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = departureDate, onValueChange = { departureDate = it.take(10) }, label = { Text("Departure date (YYYY-MM-DD)") }, modifier = Modifier.weight(1.3f), singleLine = true)
-                OutlinedTextField(value = departureTime, onValueChange = { departureTime = it.take(5) }, label = { Text("Time (HH:MM)") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = departureDate, onValueChange = { departureDate = it.take(10) }, label = { Text(if (isUrdu) "روانگی کی تاریخ (YYYY-MM-DD)" else "Departure date (YYYY-MM-DD)") }, modifier = Modifier.weight(1.3f), singleLine = true)
+                OutlinedTextField(value = departureTime, onValueChange = { departureTime = it.take(5) }, label = { Text(if (isUrdu) "وقت (HH:MM)" else "Time (HH:MM)") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text("Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text(if (isUrdu) "فی نشست کرایہ (PKR)" else "Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Button(
