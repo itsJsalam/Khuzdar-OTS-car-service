@@ -96,7 +96,7 @@ private fun OTSApp() {
                         session = session,
                         status = driverStatus,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
-                        onSubmit = { name, phone, make, model, year, plate, color, seats, luggageCapacity ->
+                        onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity ->
                             val active = session
                             if (active == null) {
                                 authMessage = "Please sign in first."
@@ -472,7 +472,7 @@ private fun DriverScreen(
             }
             Button(
                 onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage) },
-                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && year.toIntOrNull() in 1980..2100 && seats.toIntOrNull() in 1..20,
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
