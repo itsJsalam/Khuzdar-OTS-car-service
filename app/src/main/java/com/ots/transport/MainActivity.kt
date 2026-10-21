@@ -487,19 +487,19 @@ private fun DriverScreen(
 }
 
 @Composable
-private fun ProfileScreen(role: String, onRole: (String) -> Unit, onLogin: () -> Unit) {
+private fun ProfileScreen(role: String, onRole: (String) -> Unit, onLogin: () -> Unit, signedIn: Boolean, email: String, onSignOut: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Your profile", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(58.dp).clip(CircleShape).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Ink, modifier = Modifier.size(32.dp)) }
-                Spacer(Modifier.width(12.dp)); Column { Text("Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                Spacer(Modifier.width(12.dp)); Column { Text("Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text(if (signedIn) email else "Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
             }
         }
         Text("Current mode", color = Ink, fontWeight = FontWeight.Bold)
         listOf("Passenger", "Driver").forEach { FilterChip(selected = role == it, onClick = { onRole(it) }, label = { Text(it) }) }
-        Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text("Sign in / Create account") }
-        Text("Privacy note: use fictional information only. This demo stores no CNIC, payment credentials, or real identity documents.", color = Muted, fontSize = 11.sp)
+        if (signedIn) { Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") } } else { Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text("Sign in / Create account") } }
+        Text("Identity documents and payment details are not collected on this screen. Secure document upload and paid payment services will be added only when configured.", color = Muted, fontSize = 11.sp)
         Text("Version 1.0 • OTS Transport", color = Muted, fontSize = 11.sp)
     }
 }
