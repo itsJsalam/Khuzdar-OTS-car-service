@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String)
+private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null)
 private val sampleRides = listOf(
     Ride("Karachi", "Khuzdar → Karachi", "Tomorrow • 06:30 AM", "Toyota Corolla • White", "Naveed Baloch", 3000, 3, "4.9", "POPULAR"),
     Ride("Quetta", "Khuzdar → Quetta", "Tomorrow • 08:00 AM", "Honda City • Silver", "Rahim Shah", 2500, 2, "4.8", "ON TIME"),
@@ -75,6 +75,9 @@ private fun OTSApp() {
     var authMessage by remember { mutableStateOf("") }
     var session by remember { mutableStateOf<SupabaseApi.Session?>(null) }
     var driverStatus by remember { mutableStateOf("not_submitted") }
+    var liveTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
+    var tripsLoading by remember { mutableStateOf(false) }
+    var tripsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
 
@@ -82,6 +85,20 @@ private fun OTSApp() {
         val active = session
         if (active != null && role == "Driver") {
             driverStatus = try { SupabaseApi.getDriverStatus(active) } catch (_: Exception) { "unknown" }
+        }
+    }
+    LaunchedEffect(tab, session?.userId) {
+        if (tab == "Rides") {
+            tripsLoading = true
+            tripsError = ""
+            try {
+                liveTrips = SupabaseApi.getApprovedTrips(session)
+            } catch (e: Exception) {
+                liveTrips = emptyList()
+                tripsError = e.message ?: "Unable to load trips. Check your connection."
+            } finally {
+                tripsLoading = false
+            }
         }
     }
     androidx.activity.compose.BackHandler(enabled = showTicket) { showTicket = false; tab = "Bookings" }
@@ -94,8 +111,28 @@ private fun OTSApp() {
             Column(Modifier.fillMaxSize()) {
                 when {
                     showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = fareFor(selectedRide ?: sampleRides[0], selectedSeat), onBack = { showTicket = false; tab = "Bookings" })
-                    tab == "Rides" -> RidesScreen(route = selectedRoute, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; tab = "Seat" })
-                    tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = { booked = true; showTicket = true; notice = "This ticket is a local preview. Real booking and seat locking will be enabled after the booking workflow is connected." })
+                    tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; tab = "Seat" })
+                    tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
+                        val trip = selectedRide
+                        val active = session
+                        if (trip?.tripId == null) {
+                            notice = "Only trips published through OTS are bookable. Please choose a currently listed trip."
+                        } else if (active == null) {
+                            authMessage = "Sign in before confirming a booking."
+                            showOtp = true
+                        } else {
+                            scope.launch {
+                                try {
+                                    val ticketId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat))
+                                    booked = true
+                                    showTicket = true
+                                    notice = "Your booking is confirmed. Ticket reference: " + ticketId.take(8).uppercase()
+                                } catch (e: Exception) {
+                                    notice = e.message ?: "The booking could not be completed. Please try again."
+                                }
+                            }
+                        }
+                    })
                     tab == "Bookings" -> BookingsScreen(booked = booked, ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onBrowse = { tab = "Home" }, onTicket = { showTicket = true })
                     tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
                     role == "Driver" && tab == "Home" -> DriverScreen(
@@ -271,20 +308,56 @@ private fun StatCard(value: String, label: String, icon: androidx.compose.ui.gra
 }
 
 @Composable
-private fun RidesScreen(route: String, onRoute: (String) -> Unit, onSelect: (Ride) -> Unit) {
+private fun RidesScreen(
+    route: String,
+    trips: List<SupabaseApi.Trip>,
+    loading: Boolean,
+    error: String,
+    onRoute: (String) -> Unit,
+    onSelect: (Ride) -> Unit
+) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Find your ride", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Sample departures • Tomorrow and upcoming days", color = Muted, fontSize = 12.sp)
+        Text("Live trips published by approved OTS drivers", color = Muted, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Karachi", "Quetta", "Larkana", "Gwadar").forEach { city ->
+            listOf("All", "Karachi", "Quetta", "Larkana", "Gwadar").forEach { city ->
                 FilterChip(selected = route == city, onClick = { onRoute(city) }, label = { Text(city) }, leadingIcon = if (route == city) ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
             }
         }
-        sampleRides.filter { it.city == route || route == "Sindh" || route == "Makran" }.forEach { ride ->
-            RideCard(ride, onClick = { onSelect(ride) })
+        if (loading) {
+            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(10.dp)); Text("Loading available trips…", color = Muted, fontSize = 12.sp) }
+        } else {
+            val filtered = trips.filter { route == "All" || it.destination.equals(route, ignoreCase = true) }
+            filtered.forEach { trip ->
+                RideCard(
+                    Ride(
+                        city = trip.destination,
+                        route = "${trip.origin} → ${trip.destination}",
+                        time = trip.departureAt.replace("T", " ").take(16),
+                        car = "Verified vehicle",
+                        driver = "Approved OTS driver",
+                        price = trip.farePkr,
+                        seats = trip.availableSeats,
+                        rating = "—",
+                        tag = "AVAILABLE",
+                        tripId = trip.id
+                    ),
+                    onClick = {
+                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", trip.departureAt.replace("T", " ").take(16), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id))
+                    }
+                )
+            }
+            if (filtered.isEmpty()) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Icon(Icons.Default.Route, null, tint = Navy2, modifier = Modifier.size(34.dp))
+                        Text(if (error.isBlank()) "No trips available yet" else "Trips could not be loaded", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(if (error.isBlank()) "There are no published trips for this route right now. Please check again later." else error, color = Muted, fontSize = 12.sp)
+                    }
+                }
+            }
         }
-        if (sampleRides.none { it.city == route }) sampleRides.take(2).forEach { RideCard(it, onClick = { onSelect(it) }) }
-        Text("Demo data only. Times, drivers and prices are illustrative.", color = Muted, fontSize = 11.sp)
+        Text("Trips, prices and available seats are read from the shared OTS database.", color = Muted, fontSize = 11.sp)
     }
 }
 
