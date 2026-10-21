@@ -13,11 +13,11 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0-demo"
+        versionName = "1.0"
     }
 
     buildTypes {
-        debug { applicationIdSuffix = ".demo"; versionNameSuffix = "-demo" }
+        debug { }
         release { isMinifyEnabled = false }
     }
 
