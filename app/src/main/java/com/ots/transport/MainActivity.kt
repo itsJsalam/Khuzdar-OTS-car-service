@@ -330,33 +330,8 @@ private fun DriverScreen(onPublish: () -> Unit) {
         Text("Route", color = Ink, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) { listOf("Karachi", "Quetta", "Larkana", "Gwadar").forEach { FilterChip(selected = route == it, onClick = { route = it }, label = { Text(it) }) } }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp)) { Text("Seat capacity", color = Ink, fontWeight = FontWeight.Bold); Text("3 passenger seats • Sample departure 06:30 AM", color = Muted, fontSize = 12.sp) } }
-        Button(onClick = onPublish, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip (approval required)") }
-        Text("Use fake details only. This demo does not upload vehicle photos or collect real CNIC data.", color = Muted, fontSize = 11.sp)
-    }
-}
-
-@Composable
-private fun AdminScreen() {
-    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        Text("Operations centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-        Text("PRIVATE ADMIN APP", color = Color(0xFF9B681F), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("12", "Bookings", Icons.Default.ConfirmationNumber, Modifier.weight(1f)); StatCard("08", "Drivers", Icons.Default.People, Modifier.weight(1f)); StatCard("PKR 3.6k", "Commission", Icons.Default.Payments, Modifier.weight(1f)) }
-        Text("Driver approvals", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        listOf("Naveed Baloch", "Rahim Shah", "Aslam Mengal").forEachIndexed { i, name ->
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFE6EDF5)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Navy2) }
-                    Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)) { Text(name, color = Ink, fontWeight = FontWeight.Bold); Text(if (i == 0) "Pending approval" else "Phone verified • Demo", color = Muted, fontSize = 10.sp) }
-                    TextButton(onClick = {}) { Text(if (i == 0) "Review" else "View", color = Navy2) }
-                }
-            }
-        }
-        Text("Operations tools", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        listOf(Triple("Routes & fares", "Manage route cards and sample prices", Icons.Default.Route), Triple("Payments & payouts", "Review simulated transactions", Icons.Default.AccountBalanceWallet), Triple("Safety reports", "Demo incident and complaint queue", Icons.Default.Shield)).forEach {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(it.third, null, tint = Color(0xFFB17A2B), modifier = Modifier.size(24.dp)); Spacer(Modifier.width(12.dp)); Column { Text(it.first, color = Ink, fontWeight = FontWeight.Bold); Text(it.second, color = Muted, fontSize = 11.sp) }
-            }
-        }
+        Button(onClick = onPublish, enabled = false, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink, disabledContainerColor = Color(0xFF9AA7B4))) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked until approval") }
+        Text("Register one car only. Submit your driver details and vehicle for review. Do not enter real CNIC details until secure document upload is connected.", color = Muted, fontSize = 11.sp)
     }
 }
 
