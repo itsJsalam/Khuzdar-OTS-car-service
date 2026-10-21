@@ -93,6 +93,22 @@ internal object SupabaseApi {
         )
     }
 
+    suspend fun refreshSession(session: Session): Session = withContext(Dispatchers.IO) {
+        if (session.refreshToken.isBlank()) throw IllegalStateException("Your session expired. Please sign in again.")
+        val json = JSONObject(request(
+            "/auth/v1/token?grant_type=refresh_token",
+            "POST",
+            body = JSONObject().put("refresh_token", session.refreshToken)
+        ))
+        val user = json.optJSONObject("user")
+        Session(
+            userId = user?.optString("id").orEmpty().ifBlank { session.userId },
+            email = user?.optString("email").orEmpty().ifBlank { session.email },
+            accessToken = json.getString("access_token"),
+            refreshToken = json.optString("refresh_token").ifBlank { session.refreshToken }
+        )
+    }
+
     suspend fun saveProfile(session: Session, name: String, phone: String, accountType: String) = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("id", session.userId)
