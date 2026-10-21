@@ -173,6 +173,20 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Paper) {
             Column(Modifier.fillMaxSize()) {
+                if (!showTicket && tab != "Seat" && (tab != "Home" || role == "Driver")) {
+                    Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { if (tab != "Home") tab = "Home" else role = "Passenger" }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = if (language == "ur") "واپس" else "Back", tint = Ink)
+                        }
+                        Text(when (tab) {
+                            "Rides" -> if (language == "ur") "دستیاب سفر" else "Find rides"
+                            "Bookings" -> if (language == "ur") "میرے ٹکٹ" else "My tickets"
+                            "Profile" -> if (language == "ur") "پروفائل" else "Profile"
+                            "Settings" -> if (language == "ur") "ترتیبات" else "Settings"
+                            else -> if (language == "ur") "ڈرائیور مرکز" else "Driver centre"
+                        }, color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 when {
                     showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
                     tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
@@ -217,6 +231,14 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                         }
                     })
                     tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
+                    tab == "Settings" -> SettingsScreen(
+                        isUrdu = language == "ur",
+                        signedIn = session != null,
+                        email = session?.email.orEmpty(),
+                        onChooseLanguage = { showLanguagePicker = true },
+                        onAuth = { chosenRole, signup -> role = chosenRole; authIsSignup = signup; authMessage = ""; showOtp = true },
+                        onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = if (language == "ur") "آپ سائن آؤٹ ہو گئے ہیں۔" else "You have signed out." }
+                    )
                     role == "Driver" && tab == "Home" -> DriverScreen(
                         session = session,
                         status = driverStatus,
@@ -315,7 +337,13 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                 }
                 if (!showTicket && tab != "Seat") {
                     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-                        listOf(Triple("Home", Icons.Default.Home, "Home"), Triple("Rides", Icons.Default.Route, "Find rides"), Triple("Bookings", Icons.Default.ConfirmationNumber, "Tickets"), Triple("Profile", Icons.Default.Person, "Profile")).forEach { (key, icon, label) ->
+                        listOf(
+                            Triple("Home", Icons.Default.Home, if (language == "ur") "ہوم" else "Home"),
+                            Triple("Rides", Icons.Default.Route, if (language == "ur") "سفر" else "Rides"),
+                            Triple("Bookings", Icons.Default.ConfirmationNumber, if (language == "ur") "ٹکٹ" else "Tickets"),
+                            Triple("Profile", Icons.Default.Person, if (language == "ur") "پروفائل" else "Profile"),
+                            Triple("Settings", Icons.Default.Settings, if (language == "ur") "ترتیبات" else "Settings")
+                        ).forEach { (key, icon, label) ->
                             NavigationBarItem(selected = tab == key, onClick = { tab = key; showTicket = false }, icon = { Icon(icon, null) }, label = { Text(label, fontSize = 10.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Navy, indicatorColor = Color(0xFFFFE6BD), selectedTextColor = Navy))
                         }
                     }
@@ -390,8 +418,70 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                     }
                 }
             )
-            if (notice.isNotBlank()) AlertDialog(onDismissRequest = { notice = "" }, title = { Text("OTS Transport") }, text = { Text(notice) }, confirmButton = { TextButton(onClick = { notice = "" }) { Text("OK") } })
+            if (notice.isNotBlank()) AlertDialog(onDismissRequest = { notice = "" }, title = { Text("OTS Transport") }, text = { Text(notice) }, confirmButton = { TextButton(onClick = { notice = "" }) { Text(if (language == "ur") "ٹھیک ہے" else "OK") } })
+            if (language.isBlank() || showLanguagePicker) {
+                AlertDialog(
+                    onDismissRequest = { if (language.isNotBlank()) showLanguagePicker = false },
+                    title = { Text(if (language.isBlank()) "Choose your language / اپنی زبان منتخب کریں" else if (language == "ur") "زبان تبدیل کریں" else "Change language", color = Ink) },
+                    text = { Text(if (language.isBlank()) "Choose once to get started. You can change this later in Settings.\nشروع کرنے کے لیے زبان منتخب کریں۔ بعد میں ترتیبات سے تبدیل کر سکتے ہیں۔" else "English / اردو", color = Ink) },
+                    confirmButton = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = {
+                                language = "en"
+                                appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).edit().putString("language", "en").apply()
+                                showLanguagePicker = false
+                            }, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("English") }
+                            Button(onClick = {
+                                language = "ur"
+                                appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).edit().putString("language", "ur").apply()
+                                showLanguagePicker = false
+                            }, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("اردو") }
+                        }
+                    }
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    isUrdu: Boolean,
+    signedIn: Boolean,
+    email: String,
+    onChooseLanguage: () -> Unit,
+    onAuth: (String, Boolean) -> Unit,
+    onSignOut: () -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(if (isUrdu) "ترتیبات" else "Settings", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(if (isUrdu) "زبان" else "Language", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(if (isUrdu) "موجودہ زبان: اردو" else "Current language: English", color = Muted, fontSize = 12.sp)
+                OutlinedButton(onClick = onChooseLanguage, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Language, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "زبان تبدیل کریں" else "Change language")
+                }
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(if (isUrdu) "اکاؤنٹ" else "Account", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                if (signedIn) {
+                    Text(email, color = Ink, fontSize = 13.sp)
+                    Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) {
+                        Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "سائن آؤٹ" else "Sign out")
+                    }
+                } else {
+                    Text(if (isUrdu) "مسافر یا ڈرائیور کے طور پر سائن اِن کریں یا نیا اکاؤنٹ بنائیں۔" else "Choose whether you are a passenger or a driver, then sign in or create an account.", color = Muted, fontSize = 12.sp)
+                    Button(onClick = { onAuth("Passenger", false) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "مسافر لاگ اِن" else "Passenger Login") }
+                    OutlinedButton(onClick = { onAuth("Passenger", true) }, modifier = Modifier.fillMaxWidth()) { Text(if (isUrdu) "مسافر سائن اَپ" else "Passenger Sign Up") }
+                    Button(onClick = { onAuth("Driver", false) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "ڈرائیور لاگ اِن" else "Driver Login") }
+                    OutlinedButton(onClick = { onAuth("Driver", true) }, modifier = Modifier.fillMaxWidth()) { Text(if (isUrdu) "ڈرائیور سائن اَپ" else "Driver Sign Up") }
+                }
+            }
+        }
+        Text(if (isUrdu) "کسٹمر بونس اور وفاداری کے فوائد بعد میں شامل کیے جا سکتے ہیں۔" else "Customer bonuses and loyalty benefits can be added in a later update.", color = Muted, fontSize = 11.sp)
     }
 }
 
