@@ -61,6 +61,13 @@ internal object SupabaseApi {
         val passengerSeats: Int
     )
 
+    data class Vehicle(
+        val id: String, val make: String, val model: String, val year: Int,
+        val registration: String, val color: String, val vehicleType: String,
+        val seats: Int, val luggageCapacity: String, val status: String,
+        val photoPaths: List<String>
+    )
+
     suspend fun signUp(email: String, password: String): Pair<Session?, String> = withContext(Dispatchers.IO) {
         val response = request(
             "/auth/v1/signup",
@@ -196,13 +203,29 @@ internal object SupabaseApi {
     }
 
     suspend fun getDriverStatus(session: Session): String = withContext(Dispatchers.IO) {
+        val profileRows = JSONArray(request(
+            "/rest/v1/profiles?id=eq.${session.userId}&select=account_status",
+            "GET",
+            token = session.accessToken
+        ))
+        if (profileRows.length() > 0 && profileRows.getJSONObject(0).optString("account_status") == "suspended") return@withContext "suspended"
         val response = request(
-            "/rest/v1/driver_applications?user_id=eq.${session.userId}&select=status",
+            "/rest/v1/driver_applications?user_id=eq.${session.userId}&select=status,vehicles!vehicles_driver_id_fkey(status)",
             "GET",
             token = session.accessToken
         )
         val rows = JSONArray(response)
-        if (rows.length() == 0) "not_submitted" else rows.getJSONObject(0).optString("status", "pending")
+        if (rows.length() == 0) return@withContext "not_submitted"
+        val row = rows.getJSONObject(0)
+        val applicationStatus = row.optString("status", "pending")
+        if (applicationStatus != "approved") return@withContext applicationStatus
+        val vehicleValue = row.opt("vehicles")
+        val vehicle = when (vehicleValue) {
+            is JSONObject -> vehicleValue
+            is JSONArray -> if (vehicleValue.length() > 0) vehicleValue.getJSONObject(0) else JSONObject()
+            else -> JSONObject()
+        }
+        vehicle.optString("status", "pending")
     }
 
     suspend fun getApprovedTrips(session: Session? = null): List<Trip> = withContext(Dispatchers.IO) {
@@ -252,6 +275,62 @@ internal object SupabaseApi {
                 passengerSeats = row.getInt("passenger_seats")
             )
         }
+    }
+
+    suspend fun getRegisteredVehicle(session: Session): Vehicle? = withContext(Dispatchers.IO) {
+        val rows = JSONArray(request(
+            "/rest/v1/vehicles?driver_id=eq.${session.userId}&select=id,make,model,model_year,registration_number,color,vehicle_type,passenger_seats,luggage_capacity,status,exterior_photo_paths",
+            "GET",
+            token = session.accessToken
+        ))
+        if (rows.length() == 0) null else {
+            val row = rows.getJSONObject(0)
+            val photos = row.optJSONArray("exterior_photo_paths") ?: JSONArray()
+            Vehicle(
+                id = row.getString("id"), make = row.optString("make"), model = row.optString("model"),
+                year = row.optInt("model_year"), registration = row.optString("registration_number"),
+                color = row.optString("color"), vehicleType = row.optString("vehicle_type", "Car"),
+                seats = row.optInt("passenger_seats"), luggageCapacity = row.optString("luggage_capacity", "Standard"),
+                status = row.optString("status", "pending"),
+                photoPaths = (0 until photos.length()).map { photos.optString(it) }
+            )
+        }
+    }
+
+    suspend fun updateRegisteredVehicle(
+        session: Session,
+        vehicleId: String,
+        make: String,
+        model: String,
+        year: Int,
+        registration: String,
+        color: String,
+        seats: Int,
+        luggageCapacity: String,
+        context: Context,
+        newPhoto: Uri?
+    ) = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("make", make.trim())
+            .put("model", model.trim())
+            .put("model_year", year)
+            .put("registration_number", registration.trim().uppercase())
+            .put("color", color.trim())
+            .put("passenger_seats", seats)
+            .put("luggage_capacity", luggageCapacity.trim())
+            .put("status", "pending")
+        if (newPhoto != null) {
+            val path = uploadPrivateFile(context, session, "vehicle-photos", newPhoto, "vehicle-photo")
+            payload.put("exterior_photo_paths", JSONArray().put(path))
+        }
+        request(
+            "/rest/v1/vehicles?id=eq.$vehicleId",
+            "PATCH",
+            token = session.accessToken,
+            body = payload,
+            prefer = "return=minimal"
+        )
+        Unit
     }
 
     suspend fun publishTrip(
