@@ -29,6 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 private val Ink = Color(0xFF071525)
 private val Navy = Color(0xFF0D2238)
@@ -81,9 +84,9 @@ private fun OTSApp() {
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
 
-    LaunchedEffect(session?.userId, role) {
+    LaunchedEffect(session?.userId, role, tab) {
         val active = session
-        if (active != null && role == "Driver") {
+        if (active != null && role == "Driver" && tab == "Home") {
             driverStatus = try { SupabaseApi.getDriverStatus(active) } catch (_: Exception) { "unknown" }
         }
     }
@@ -173,6 +176,27 @@ private fun OTSApp() {
                         session = session,
                         status = driverStatus,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
+                        onPublishTrip = { destination, pickup, dropoff, date, time, fare, seats ->
+                            val active = session
+                            val departure = toDepartureIso(date, time)
+                            if (active == null) {
+                                authMessage = "Please sign in first."
+                                showOtp = true
+                            } else if (departure == null) {
+                                notice = "Enter a valid future departure date as YYYY-MM-DD and time as HH:MM (24-hour)."
+                            } else {
+                                scope.launch {
+                                    try {
+                                        val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your car has not been approved yet.")
+                                        if (seats > vehicle.passengerSeats) throw IllegalStateException("This car is approved for only ${vehicle.passengerSeats} passenger seats.")
+                                        val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, fare, seats)
+                                        notice = "Trip published successfully. Reference: " + tripId.take(8).uppercase()
+                                    } catch (e: Exception) {
+                                        notice = e.message ?: "The trip could not be published."
+                                    }
+                                }
+                            }
+                        },
                         onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity, driverPhoto, cnicDocument, vehiclePhoto ->
                             val active = session
                             if (active == null) {
@@ -272,6 +296,21 @@ private fun OTSApp() {
             )
             if (notice.isNotBlank()) AlertDialog(onDismissRequest = { notice = "" }, title = { Text("OTS Transport") }, text = { Text(notice) }, confirmButton = { TextButton(onClick = { notice = "" }) { Text("OK") } })
         }
+    }
+}
+
+private fun toDepartureIso(date: String, time: String): String? {
+    return try {
+        val zone = TimeZone.getTimeZone("Asia/Karachi")
+        val parser = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).apply {
+            isLenient = false
+            timeZone = zone
+        }
+        val parsed = parser.parse("$date $time") ?: return null
+        if (parsed.time <= System.currentTimeMillis()) return null
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply { timeZone = zone }.format(parsed)
+    } catch (_: Exception) {
+        null
     }
 }
 
@@ -558,6 +597,7 @@ private fun DriverScreen(
     session: SupabaseApi.Session?,
     status: String,
     onLogin: () -> Unit,
+    onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
     onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, Uri?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -569,6 +609,13 @@ private fun DriverScreen(
     var color by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("3") }
     var luggage by remember { mutableStateOf("Standard") }
+    var destination by remember { mutableStateOf("Karachi") }
+    var pickupPoint by remember { mutableStateOf("Khuzdar") }
+    var dropoffPoint by remember { mutableStateOf("Karachi") }
+    var departureDate by remember { mutableStateOf("") }
+    var departureTime by remember { mutableStateOf("06:30") }
+    var tripFare by remember { mutableStateOf("") }
+    var tripSeats by remember { mutableStateOf("3") }
     var driverPhoto by remember { mutableStateOf<Uri?>(null) }
     var cnicDocument by remember { mutableStateOf<Uri?>(null) }
     var vehiclePhoto by remember { mutableStateOf<Uri?>(null) }
@@ -631,11 +678,36 @@ private fun DriverScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
+        } else if (status == "approved") {
+            Text("Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text("Your approved car will be used for every route. You can publish multiple trips with different schedules.", color = Muted, fontSize = 12.sp)
+            Text("Destination", color = Ink, fontWeight = FontWeight.Bold)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                listOf("Karachi", "Quetta", "Larkana", "Gwadar", "Turbat", "Ratto Dero").forEach { city ->
+                    FilterChip(selected = destination == city, onClick = { destination = city; dropoffPoint = city }, label = { Text(city) })
+                }
+            }
+            OutlinedTextField(value = pickupPoint, onValueChange = { pickupPoint = it }, label = { Text("Pickup point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = dropoffPoint, onValueChange = { dropoffPoint = it }, label = { Text("Drop-off point") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                OutlinedTextField(value = departureDate, onValueChange = { departureDate = it.take(10) }, label = { Text("Departure date (YYYY-MM-DD)") }, modifier = Modifier.weight(1.3f), singleLine = true)
+                OutlinedTextField(value = departureTime, onValueChange = { departureTime = it.take(5) }, label = { Text("Time (HH:MM)") }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text("Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            Button(
+                onClick = { onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0) },
+                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..20,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink)
+            ) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip") }
         } else {
             Text("Registered vehicle", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Your account has one registered car. Vehicle edits and document uploads will be enabled in the next connected workflow.", color = Muted, fontSize = 12.sp)
+            Text("Your application is under review or requires action. Trip publishing remains locked until driver and car approval are both complete.", color = Muted, fontSize = 12.sp)
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF9AA7B4))) {
-                Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Trip publishing requires full approval workflow")
+                Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked")
             }
         }
     }
