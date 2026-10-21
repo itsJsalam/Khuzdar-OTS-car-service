@@ -9,6 +9,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Small REST client for Supabase Auth and PostgREST.
@@ -184,8 +188,14 @@ internal object SupabaseApi {
     }
 
     suspend fun getApprovedTrips(session: Session? = null): List<Trip> = withContext(Dispatchers.IO) {
+        val now = URLEncoder.encode(
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+                .apply { timeZone = TimeZone.getTimeZone("Asia/Karachi") }
+                .format(Date()),
+            "UTF-8"
+        )
         val response = request(
-            "/rest/v1/trips?status=eq.published&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
+            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats&order=departure_at.asc",
             "GET",
             token = session?.accessToken
         )
