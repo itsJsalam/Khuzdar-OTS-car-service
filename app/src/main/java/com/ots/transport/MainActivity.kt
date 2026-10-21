@@ -44,7 +44,7 @@ private val Muted = Color(0xFF7E8EA1)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { OTSApp() }
+        setContent { OTSApp(initialSession = SessionStore.load(this@MainActivity)) }
     }
 }
 
@@ -57,7 +57,7 @@ private val sampleRides = listOf(
 )
 
 @Composable
-private fun OTSApp() {
+private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
     var selectedRoute by remember { mutableStateOf("Karachi") }
@@ -81,7 +81,7 @@ private fun OTSApp() {
     var authIsSignup by remember { mutableStateOf(false) }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf("") }
-    var session by remember { mutableStateOf<SupabaseApi.Session?>(null) }
+    var session by remember { mutableStateOf<SupabaseApi.Session?>(initialSession) }
     var driverStatus by remember { mutableStateOf("not_submitted") }
     var liveTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
     var tripsLoading by remember { mutableStateOf(false) }
@@ -89,6 +89,19 @@ private fun OTSApp() {
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        val stored = initialSession
+        if (stored != null) {
+            try {
+                val refreshed = SupabaseApi.refreshSession(stored)
+                SessionStore.save(appContext, refreshed)
+                session = refreshed
+            } catch (_: Exception) {
+                SessionStore.clear(appContext)
+                session = null
+            }
+        }
+    }
     LaunchedEffect(session?.userId, role, tab) {
         val active = session
         if (active != null && role == "Driver" && tab == "Home") {
@@ -176,7 +189,7 @@ private fun OTSApp() {
                             } catch (e: Exception) { notice = e.message ?: "Could not request cancellation." }
                         }
                     })
-                    tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
+                    tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
                     role == "Driver" && tab == "Home" -> DriverScreen(
                         session = session,
                         status = driverStatus,
@@ -264,6 +277,7 @@ private fun OTSApp() {
                                             authMessage = result.second
                                         } else {
                                             SupabaseApi.saveProfile(created, authName, authPhone, role)
+                                            SessionStore.save(appContext, created)
                                             session = created
                                             showOtp = false
                                             notice = "Your OTS account is ready."
@@ -279,6 +293,7 @@ private fun OTSApp() {
                                             authPhone = profile.optString("phone")
                                             role = if (profile.optString("account_type") == "driver") "Driver" else "Passenger"
                                         }
+                                        SessionStore.save(appContext, signedIn)
                                         session = signedIn
                                         showOtp = false
                                         notice = "You are signed in to OTS Transport."
