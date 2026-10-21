@@ -74,8 +74,7 @@ private fun OTSApp() {
                     tab == "Bookings" -> BookingsScreen(booked = booked, ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onBrowse = { tab = "Home" }, onTicket = { showTicket = true })
                     tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { showOtp = true })
                     role == "Driver" && tab == "Home" -> DriverScreen(onPublish = { notice = "Your demo ride was saved locally for this session." })
-                    role == "Admin" && tab == "Home" -> AdminScreen()
-                    else -> HomeScreen(role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" }, onAdmin = { role = "Admin"; tab = "Home" })
+                    else -> HomeScreen(role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" })
                 }
                 if (!showTicket && tab != "Seat") {
                     NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
@@ -88,7 +87,7 @@ private fun OTSApp() {
             if (showOtp) AlertDialog(
                 onDismissRequest = { showOtp = false },
                 title = { Text("Welcome to OTS") },
-                text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("Demo sign-in • No SMS is sent.") ; OutlinedTextField(value = "+92 300 0000000", onValueChange = {}, label = { Text("Phone number") }, readOnly = true); OutlinedTextField(value = "1234", onValueChange = {}, label = { Text("Demo OTP") }, readOnly = true) } },
+                text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("Account sign-in is not connected yet. No SMS or payment service is active.") ; OutlinedTextField(value = "+92 300 0000000", onValueChange = {}, label = { Text("Phone number") }, readOnly = true); OutlinedTextField(value = "1234", onValueChange = {}, label = { Text("Demo OTP") }, readOnly = true) } },
                 confirmButton = { Button(onClick = { showOtp = false; notice = "Demo login successful." }) { Text("Verify & enter") } },
                 dismissButton = { TextButton(onClick = { showOtp = false }) { Text("Cancel") } }
             )
@@ -98,16 +97,15 @@ private fun OTSApp() {
 }
 
 @Composable
-private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit, onAdmin: () -> Unit) {
+private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Paper)) {
         Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Ink, Navy2, Color(0xFF23536A)))).padding(start = 22.dp, end = 22.dp, top = 24.dp, bottom = 28.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Gold, Color(0xFFFFE7B6)))), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Ink, modifier = Modifier.size(27.dp)) }
                     Spacer(Modifier.width(11.dp))
-                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text("KHuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text("Khuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
                     Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onAdmin) { Icon(Icons.Default.AdminPanelSettings, "Demo admin", tint = Gold) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -124,7 +122,6 @@ private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoleChip("Passenger", role == "Passenger") { onRole("Passenger") }
                     RoleChip("Driver", role == "Driver") { onRole("Driver"); onDriver() }
-                    RoleChip("Admin demo", role == "Admin") { onRole("Admin"); onAdmin() }
                 }
             }
         }
@@ -324,7 +321,7 @@ private fun DriverScreen(onPublish: () -> Unit) {
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(CircleShape).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Ink, modifier = Modifier.size(30.dp)) }
-                Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Demo driver profile", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp); Text("Phone verified • Pending approval simulation", color = Color(0xFFB9CBD9), fontSize = 10.sp) }
+                Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Driver application", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp); Text("Approval required before trip publishing", color = Color(0xFFB9CBD9), fontSize = 10.sp) }
             }
         }
         Text("Publish a ride", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -333,7 +330,7 @@ private fun DriverScreen(onPublish: () -> Unit) {
         Text("Route", color = Ink, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) { listOf("Karachi", "Quetta", "Larkana", "Gwadar").forEach { FilterChip(selected = route == it, onClick = { route = it }, label = { Text(it) }) } }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp)) { Text("Seat capacity", color = Ink, fontWeight = FontWeight.Bold); Text("3 passenger seats • Sample departure 06:30 AM", color = Muted, fontSize = 12.sp) } }
-        Button(onClick = onPublish, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish demo ride") }
+        Button(onClick = onPublish, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip (approval required)") }
         Text("Use fake details only. This demo does not upload vehicle photos or collect real CNIC data.", color = Muted, fontSize = 11.sp)
     }
 }
@@ -342,7 +339,7 @@ private fun DriverScreen(onPublish: () -> Unit) {
 private fun AdminScreen() {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
         Text("Operations centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-        Text("ADMIN DEMO • SAMPLE DATA", color = Color(0xFF9B681F), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
+        Text("PRIVATE ADMIN APP", color = Color(0xFF9B681F), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("12", "Bookings", Icons.Default.ConfirmationNumber, Modifier.weight(1f)); StatCard("08", "Drivers", Icons.Default.People, Modifier.weight(1f)); StatCard("PKR 3.6k", "Commission", Icons.Default.Payments, Modifier.weight(1f)) }
         Text("Driver approvals", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         listOf("Naveed Baloch", "Rahim Shah", "Aslam Mengal").forEachIndexed { i, name ->
@@ -370,13 +367,13 @@ private fun ProfileScreen(role: String, onRole: (String) -> Unit, onLogin: () ->
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(58.dp).clip(CircleShape).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Ink, modifier = Modifier.size(32.dp)) }
-                Spacer(Modifier.width(12.dp)); Column { Text("OTS demo account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("No real account required", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                Spacer(Modifier.width(12.dp)); Column { Text("Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
             }
         }
         Text("Current mode", color = Ink, fontWeight = FontWeight.Bold)
-        listOf("Passenger", "Driver", "Admin").forEach { FilterChip(selected = role == it, onClick = { onRole(it) }, label = { Text(it) }) }
-        Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text("Demo phone OTP login") }
+        listOf("Passenger", "Driver").forEach { FilterChip(selected = role == it, onClick = { onRole(it) }, label = { Text(it) }) }
+        Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text("Sign in / Create account") }
         Text("Privacy note: use fictional information only. This demo stores no CNIC, payment credentials, or real identity documents.", color = Muted, fontSize = 11.sp)
-        Text("Version 1.0 • OTS Transport demo", color = Muted, fontSize = 11.sp)
+        Text("Version 1.0 • OTS Transport", color = Muted, fontSize = 11.sp)
     }
 }
