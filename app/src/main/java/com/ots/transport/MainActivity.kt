@@ -83,6 +83,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var authMessage by remember { mutableStateOf("") }
     var session by remember { mutableStateOf<SupabaseApi.Session?>(initialSession) }
     var driverStatus by remember { mutableStateOf("not_submitted") }
+    var registeredVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
     var driverTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
     var liveTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
     var tripsLoading by remember { mutableStateOf(false) }
@@ -107,6 +108,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
         val active = session
         if (active != null && role == "Driver" && tab == "Home") {
             driverStatus = try { SupabaseApi.getDriverStatus(active) } catch (_: Exception) { "unknown" }
+            registeredVehicle = try { SupabaseApi.getRegisteredVehicle(active) } catch (_: Exception) { null }
             driverTrips = if (driverStatus == "approved") try { SupabaseApi.getDriverTrips(active) } catch (_: Exception) { emptyList() } else emptyList()
         }
     }
@@ -196,7 +198,22 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                         session = session,
                         status = driverStatus,
                         trips = driverTrips,
+                        vehicle = registeredVehicle,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
+                        onUpdateVehicle = { vehicle, make, model, year, plate, color, seats, luggageCapacity, photo ->
+                            val active = session
+                            if (active != null) scope.launch {
+                                try {
+                                    SupabaseApi.updateRegisteredVehicle(active, vehicle.id, make, model, year, plate, color, seats, luggageCapacity, appContext, photo)
+                                    driverStatus = "pending"
+                                    registeredVehicle = SupabaseApi.getRegisteredVehicle(active)
+                                    driverTrips = emptyList()
+                                    notice = "Vehicle details updated and sent for reapproval. Publishing is locked until the administrator approves the changes."
+                                } catch (e: Exception) {
+                                    notice = e.message ?: "Vehicle details could not be updated."
+                                }
+                            }
+                        },
                         onCancelTrip = { trip ->
                             val active = session
                             if (active != null) scope.launch {
@@ -652,7 +669,9 @@ private fun DriverScreen(
     session: SupabaseApi.Session?,
     status: String,
     trips: List<SupabaseApi.Trip>,
+    vehicle: SupabaseApi.Vehicle?,
     onLogin: () -> Unit,
+    onUpdateVehicle: (SupabaseApi.Vehicle, String, String, Int, String, String, Int, String, Uri?) -> Unit,
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
     onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
     onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
@@ -675,6 +694,9 @@ private fun DriverScreen(
     var tripFare by remember { mutableStateOf("") }
     var tripSeats by remember { mutableStateOf("3") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
+    var editVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
+    var replacementVehiclePhoto by remember { mutableStateOf<Uri?>(null) }
+    val editVehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { replacementVehiclePhoto = it }
     var editCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
     var editDestination by remember { mutableStateOf("") }
     var editPickup by remember { mutableStateOf("") }
@@ -746,6 +768,21 @@ private fun DriverScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
         } else if (status == "approved") {
+            if (vehicle != null) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("YOUR REGISTERED CAR", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("${vehicle.make} ${vehicle.model} • ${vehicle.year}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Registration: ${vehicle.registration} • ${vehicle.seats} passenger seats", color = Muted, fontSize = 11.sp)
+                        OutlinedButton(onClick = {
+                            editVehicle = vehicle
+                            make = vehicle.make; model = vehicle.model; year = vehicle.year.toString()
+                            plate = vehicle.registration; color = vehicle.color; seats = vehicle.seats.toString(); luggage = vehicle.luggageCapacity
+                            replacementVehiclePhoto = null
+                        }, modifier = Modifier.fillMaxWidth()) { Text("Correct vehicle details") }
+                    }
+                }
+            }
             Text("Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Your approved car will be used for every route. You can publish multiple trips with different schedules.", color = Muted, fontSize = 12.sp)
             Text("Destination", color = Ink, fontWeight = FontWeight.Bold)
@@ -802,6 +839,35 @@ private fun DriverScreen(
                 Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked")
             }
         }
+    }
+    if (editVehicle != null) {
+        AlertDialog(
+            onDismissRequest = { editVehicle = null },
+            title = { Text("Correct registered car") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Only one car can be registered to this driver. Any change sends the vehicle back for administrator approval.", color = Muted, fontSize = 11.sp)
+                    OutlinedTextField(make, { make = it }, label = { Text("Make") }, singleLine = true)
+                    OutlinedTextField(model, { model = it }, label = { Text("Model") }, singleLine = true)
+                    OutlinedTextField(year, { year = it.filter { c -> c.isDigit() }.take(4) }, label = { Text("Year") }, singleLine = true)
+                    OutlinedTextField(plate, { plate = it.uppercase() }, label = { Text("Registration number") }, singleLine = true)
+                    OutlinedTextField(color, { color = it }, label = { Text("Color") }, singleLine = true)
+                    OutlinedTextField(seats, { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, singleLine = true)
+                    OutlinedTextField(luggage, { luggage = it }, label = { Text("Luggage capacity") }, singleLine = true)
+                    OutlinedButton(onClick = { editVehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (replacementVehiclePhoto == null) "Replace car photo (optional)" else "Replacement photo selected")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
+                    onClick = { editVehicle?.let { onUpdateVehicle(it, make, model, year.toIntOrNull() ?: 2020, plate, color, seats.toIntOrNull() ?: 3, luggage, replacementVehiclePhoto) }; editVehicle = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink)
+                ) { Text("Submit for reapproval") }
+            },
+            dismissButton = { TextButton(onClick = { editVehicle = null }) { Text("Back") } }
+        )
     }
     if (editCandidate != null) {
         AlertDialog(
