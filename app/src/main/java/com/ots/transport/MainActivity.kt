@@ -69,9 +69,10 @@ private val sampleRides = listOf(
 
 @Composable
 private fun OTSApp(initialSession: SupabaseApi.Session?) {
+    val appContext = LocalContext.current
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
-    var language by remember { mutableStateOf("") }
+    var language by remember { mutableStateOf(appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).getString("language", "").orEmpty()) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var selectedRoute by remember { mutableStateOf("Karachi") }
     var selectedRide by remember { mutableStateOf<Ride?>(null) }
@@ -102,8 +103,6 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var tripsLoading by remember { mutableStateOf(false) }
     var tripsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    val appContext = LocalContext.current
-    LaunchedEffect(appContext) { language = appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).getString("language", "").orEmpty() }
 
     LaunchedEffect(Unit) {
         val stored = initialSession
@@ -351,10 +350,14 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
             }
             if (showOtp) AlertDialog(
                 onDismissRequest = { if (!authBusy) showOtp = false },
-                title = { Text(if (authIsSignup) "Create your OTS account" else "Sign in to OTS") },
+                title = { Text(if (language == "ur") { if (authIsSignup) "OTS اکاؤنٹ بنائیں" else "OTS میں سائن اِن کریں" } else { if (authIsSignup) "Create your OTS account" else "Sign in to OTS" }) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text(if (role == "Driver") "Driver access • approval is required before trip publishing." else "Passenger access • use an email and password. No paid SMS service is needed.")
+                        Text(if (language == "ur") {
+                            if (role == "Driver") "ڈرائیور اکاؤنٹ • سفر شائع کرنے سے پہلے منظوری ضروری ہے۔" else "مسافر اکاؤنٹ • ای میل اور پاس ورڈ استعمال کریں۔"
+                        } else {
+                            if (role == "Driver") "Driver access • approval is required before trip publishing." else "Passenger access • use an email and password. No paid SMS service is needed."
+                        })
                         if (authIsSignup) {
                             OutlinedTextField(value = authName, onValueChange = { authName = it }, label = { Text("Full name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                             OutlinedTextField(value = authPhone, onValueChange = { authPhone = it }, label = { Text("Phone number (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -409,12 +412,12 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                 }
                             }
                         }
-                    }) { Text(if (authIsSignup) "Create account" else "Sign in") }
+                    }) { Text(if (language == "ur") { if (authIsSignup) "اکاؤنٹ بنائیں" else "سائن اِن" } else { if (authIsSignup) "Create account" else "Sign in" }) }
                 },
                 dismissButton = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) { Text(if (authIsSignup) "I have an account" else "Create account") }
-                        TextButton(enabled = !authBusy, onClick = { showOtp = false }) { Text("Back") }
+                        TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) { Text(if (language == "ur") { if (authIsSignup) "میرا اکاؤنٹ موجود ہے" else "اکاؤنٹ بنائیں" } else { if (authIsSignup) "I have an account" else "Create account" }) }
+                        TextButton(enabled = !authBusy, onClick = { showOtp = false }) { Text(if (language == "ur") "واپس" else "Back") }
                     }
                 }
             )
