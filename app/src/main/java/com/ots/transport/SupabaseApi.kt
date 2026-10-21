@@ -237,7 +237,7 @@ internal object SupabaseApi {
             "UTF-8"
         )
         val response = request(
-            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
+            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&available_seats=gt.0&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
             "GET",
             token = session?.accessToken
         )
