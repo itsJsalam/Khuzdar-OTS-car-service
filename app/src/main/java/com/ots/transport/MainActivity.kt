@@ -1,6 +1,7 @@
 package com.ots.transport
 
 import android.os.Bundle
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,9 +45,24 @@ private val Paper = Color(0xFFF4F7FB)
 private val Muted = Color(0xFF7E8EA1)
 
 class MainActivity : ComponentActivity() {
+    private val oauthCallbackState = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { OTSApp(initialSession = SessionStore.load(this@MainActivity)) }
+        oauthCallbackState.value = intent?.data
+        setContent {
+            OTSApp(
+                initialSession = SessionStore.load(this@MainActivity),
+                oauthCallback = oauthCallbackState.value,
+                onOAuthCallbackHandled = { oauthCallbackState.value = null }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        oauthCallbackState.value = intent.data
     }
 }
 
@@ -68,7 +84,11 @@ private val sampleRides = listOf(
 )
 
 @Composable
-private fun OTSApp(initialSession: SupabaseApi.Session?) {
+private fun OTSApp(
+    initialSession: SupabaseApi.Session?,
+    oauthCallback: Uri?,
+    onOAuthCallbackHandled: () -> Unit
+) {
     val appContext = LocalContext.current
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
@@ -103,6 +123,31 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var tripsLoading by remember { mutableStateOf(false) }
     var tripsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(oauthCallback) {
+        val callback = oauthCallback ?: return@LaunchedEffect
+        authBusy = true
+        authMessage = ""
+        try {
+            val signedIn = SupabaseApi.completeGoogleOAuth(appContext, callback)
+            val profile = SupabaseApi.getProfile(signedIn)
+            if (profile == null) {
+                SupabaseApi.saveProfile(signedIn, signedIn.email.substringBefore("@").ifBlank { "OTS passenger" }, "", role)
+            } else {
+                role = if (profile.optString("account_type") == "driver") "Driver" else "Passenger"
+            }
+            SessionStore.save(appContext, signedIn)
+            session = signedIn
+            showOtp = false
+            notice = if (language == "ur") "Google کے ذریعے OTS میں سائن اِن ہو گیا۔" else "You are signed in to OTS with Google."
+        } catch (e: Exception) {
+            authMessage = "Google sign-in: " + (e.message ?: "Unable to complete sign-in. Check OAuth setup.")
+            showOtp = true
+        } finally {
+            authBusy = false
+            onOAuthCallbackHandled()
+        }
+    }
 
     LaunchedEffect(Unit) {
         val stored = initialSession
@@ -369,6 +414,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                     }
                 },
                 confirmButton = {
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = !authBusy, onClick = {
                         if (authEmail.isBlank() || authPassword.length < 6 || (authIsSignup && authName.isBlank())) {
                             authMessage = if (authIsSignup) "Enter your name, a valid email, and a password of at least 6 characters." else "Enter your email and a password of at least 6 characters."
@@ -413,6 +459,22 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                             }
                         }
                     }) { Text(if (language == "ur") { if (authIsSignup) "اکاؤنٹ بنائیں" else "سائن اِن" } else { if (authIsSignup) "Create account" else "Sign in" }) }
+                    OutlinedButton(
+                        enabled = !authBusy,
+                        onClick = {
+                            try {
+                                val url = SupabaseApi.beginGoogleOAuth(appContext)
+                                appContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (e: Exception) {
+                                authMessage = e.message ?: "Google sign-in could not be started."
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (language == "ur") "Google کے ساتھ جاری رکھیں" else "Continue with Google")
+                    }
+                    }
                 },
                 dismissButton = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
