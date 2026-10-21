@@ -83,6 +83,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
     var authMessage by remember { mutableStateOf("") }
     var session by remember { mutableStateOf<SupabaseApi.Session?>(initialSession) }
     var driverStatus by remember { mutableStateOf("not_submitted") }
+    var driverTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
     var liveTrips by remember { mutableStateOf<List<SupabaseApi.Trip>>(emptyList()) }
     var tripsLoading by remember { mutableStateOf(false) }
     var tripsError by remember { mutableStateOf("") }
@@ -106,6 +107,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
         val active = session
         if (active != null && role == "Driver" && tab == "Home") {
             driverStatus = try { SupabaseApi.getDriverStatus(active) } catch (_: Exception) { "unknown" }
+            driverTrips = if (driverStatus == "approved") try { SupabaseApi.getDriverTrips(active) } catch (_: Exception) { emptyList() } else emptyList()
         }
     }
     LaunchedEffect(tab, session?.userId) {
@@ -193,7 +195,20 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                     role == "Driver" && tab == "Home" -> DriverScreen(
                         session = session,
                         status = driverStatus,
+                        trips = driverTrips,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
+                        onCancelTrip = { trip ->
+                            val active = session
+                            if (active != null) scope.launch {
+                                try {
+                                    SupabaseApi.cancelTrip(active, trip.id)
+                                    driverTrips = SupabaseApi.getDriverTrips(active)
+                                    notice = "Trip cancelled."
+                                } catch (e: Exception) {
+                                    notice = e.message ?: "This trip could not be cancelled. Trips with active bookings require OTS review."
+                                }
+                            }
+                        },
                         onPublishTrip = { destination, pickup, dropoff, date, time, fare, seats ->
                             val active = session
                             val departure = toDepartureIso(date, time)
@@ -208,6 +223,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                                         val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your car has not been approved yet.")
                                         if (seats > vehicle.passengerSeats) throw IllegalStateException("This car is approved for only ${vehicle.passengerSeats} passenger seats.")
                                         val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, fare, seats)
+                                        driverTrips = SupabaseApi.getDriverTrips(active)
                                         notice = "Trip published successfully. Reference: " + tripId.take(8).uppercase()
                                     } catch (e: Exception) {
                                         notice = e.message ?: "The trip could not be published."
@@ -615,7 +631,9 @@ private fun TicketDetail(label: String, value: String) {
 private fun DriverScreen(
     session: SupabaseApi.Session?,
     status: String,
+    trips: List<SupabaseApi.Trip>,
     onLogin: () -> Unit,
+    onCancelTrip: (SupabaseApi.Trip) -> Unit,
     onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
     onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, Uri?) -> Unit
 ) {
@@ -635,6 +653,7 @@ private fun DriverScreen(
     var departureTime by remember { mutableStateOf("06:30") }
     var tripFare by remember { mutableStateOf("") }
     var tripSeats by remember { mutableStateOf("3") }
+    var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
     var driverPhoto by remember { mutableStateOf<Uri?>(null) }
     var cnicDocument by remember { mutableStateOf<Uri?>(null) }
     var vehiclePhoto by remember { mutableStateOf<Uri?>(null) }
@@ -722,6 +741,19 @@ private fun DriverScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip") }
+            Spacer(Modifier.height(10.dp))
+            Text("Your trips", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            if (trips.isEmpty()) Text("You have not published any trips yet.", color = Muted, fontSize = 12.sp)
+            trips.forEach { trip ->
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(15.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${trip.origin} → ${trip.destination}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(trip.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 11.sp)
+                        Text("PKR ${trip.farePkr} • ${trip.availableSeats}/${trip.totalSeats} seats available • ${trip.status.uppercase()}", color = Navy2, fontSize = 11.sp)
+                        if (trip.status == "published") OutlinedButton(onClick = { cancelCandidate = trip }, modifier = Modifier.fillMaxWidth()) { Text("Cancel trip") }
+                    }
+                }
+            }
         } else {
             Text("Registered vehicle", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Your application is under review or requires action. Trip publishing remains locked until driver and car approval are both complete.", color = Muted, fontSize = 12.sp)
@@ -729,6 +761,15 @@ private fun DriverScreen(
                 Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked")
             }
         }
+    }
+    if (cancelCandidate != null) {
+        AlertDialog(
+            onDismissRequest = { cancelCandidate = null },
+            title = { Text("Cancel this trip?") },
+            text = { Text("OTS will block cancellation if this trip has active passenger bookings, so their journeys are not silently disrupted.") },
+            confirmButton = { Button(onClick = { cancelCandidate?.let(onCancelTrip); cancelCandidate = null }, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Confirm cancellation") } },
+            dismissButton = { TextButton(onClick = { cancelCandidate = null }) { Text("Keep trip") } }
+        )
     }
 }
 
