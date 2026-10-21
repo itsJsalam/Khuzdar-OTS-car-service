@@ -1,8 +1,11 @@
 package com.ots.transport
 
 import android.os.Bundle
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -21,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,6 +75,7 @@ private fun OTSApp() {
     var session by remember { mutableStateOf<SupabaseApi.Session?>(null) }
     var driverStatus by remember { mutableStateOf("not_submitted") }
     val scope = rememberCoroutineScope()
+    val appContext = LocalContext.current
 
     LaunchedEffect(session?.userId, role) {
         val active = session
@@ -96,7 +101,7 @@ private fun OTSApp() {
                         session = session,
                         status = driverStatus,
                         onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
-                        onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity ->
+                        onSubmit = { name, phone, year, make, model, plate, seats, color, luggageCapacity, driverPhoto, cnicDocument, vehiclePhoto ->
                             val active = session
                             if (active == null) {
                                 authMessage = "Please sign in first."
@@ -105,7 +110,7 @@ private fun OTSApp() {
                                 scope.launch {
                                     driverStatus = "submitting"
                                     try {
-                                        SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity)
+                                        SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity, appContext, driverPhoto, cnicDocument, vehiclePhoto)
                                         driverStatus = "pending"
                                         notice = "Your driver and one-car application has been submitted. You cannot publish trips until the administrator approves it."
                                     } catch (e: Exception) {
@@ -418,7 +423,7 @@ private fun DriverScreen(
     session: SupabaseApi.Session?,
     status: String,
     onLogin: () -> Unit,
-    onSubmit: (String, String, Int, String, String, String, Int, String, String) -> Unit
+    onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, Uri?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -429,6 +434,12 @@ private fun DriverScreen(
     var color by remember { mutableStateOf("") }
     var seats by remember { mutableStateOf("3") }
     var luggage by remember { mutableStateOf("Standard") }
+    var driverPhoto by remember { mutableStateOf<Uri?>(null) }
+    var cnicDocument by remember { mutableStateOf<Uri?>(null) }
+    var vehiclePhoto by remember { mutableStateOf<Uri?>(null) }
+    val driverPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { driverPhoto = it }
+    val vehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { vehiclePhoto = it }
+    val cnicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { cnicDocument = it }
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.DirectionsCar, null, tint = Navy, modifier = Modifier.size(30.dp))
@@ -454,7 +465,7 @@ private fun DriverScreen(
             Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in / Create account") }
         } else if (status == "not_submitted" || status == "unknown") {
             Text("Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Register exactly one car. Use test details while trying the app. Secure driver-photo and CNIC-document upload is still being connected; do not type your CNIC number here.", color = Muted, fontSize = 12.sp)
+            Text("Register exactly one car. Your driver photo, CNIC document and car photo are uploaded to private storage for administrator review. Use fictional documents while testing.", color = Muted, fontSize = 12.sp)
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -470,9 +481,18 @@ private fun DriverScreen(
                 OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text("Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
             }
+            OutlinedButton(onClick = { driverPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (driverPhoto == null) "Choose driver photo" else "Driver photo selected")
+            }
+            OutlinedButton(onClick = { cnicPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp", "application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) "Choose CNIC image / PDF" else "CNIC document selected")
+            }
+            OutlinedButton(onClick = { vehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhoto == null) "Choose car exterior photo" else "Car photo selected")
+            }
             Button(
-                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage) },
-                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
+                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage, driverPhoto, cnicDocument, vehiclePhoto) },
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhoto != null && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
