@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +51,15 @@ class MainActivity : ComponentActivity() {
 }
 
 private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null, val totalSeats: Int = 4, val pickupPoint: String = "Khuzdar", val dropoffPoint: String? = null)
+@Composable
+private fun OtsLogo(size: androidx.compose.ui.unit.Dp) {
+    Image(
+        painter = painterResource(id = R.drawable.ots_logo),
+        contentDescription = "OTS Transport logo",
+        modifier = Modifier.size(size).clip(RoundedCornerShape(13.dp))
+    )
+}
+
 private val sampleRides = listOf(
     Ride("Karachi", "Khuzdar → Karachi", "Tomorrow • 06:30 AM", "Toyota Corolla • White", "Naveed Baloch", 3000, 3, "4.9", "POPULAR"),
     Ride("Quetta", "Khuzdar → Quetta", "Tomorrow • 08:00 AM", "Honda City • Silver", "Rahim Shah", 2500, 2, "4.8", "ON TIME"),
@@ -406,9 +417,7 @@ private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String)
                         Spacer(Modifier.height(7.dp))
                         Text("Reserve your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
                     }
-                    Box(Modifier.size(94.dp).clip(CircleShape).background(Color.White.copy(alpha = .08f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.DirectionsCarFilled, null, tint = Gold, modifier = Modifier.size(62.dp))
-                    }
+                    OtsLogo(78.dp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoleChip("Passenger", role == "Passenger") { onRole("Passenger") }
@@ -644,7 +653,7 @@ private fun TicketScreen(ride: Ride, seat: String, fare: Int, reference: String,
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp)) {
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Ink) }
+                    OtsLogo(42.dp)
                     Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DIGITAL BOARDING PASS", color = Muted, fontSize = 9.sp) }
                     Spacer(Modifier.weight(1f)); Icon(Icons.Default.Verified, null, tint = Color(0xFF159C7B))
                 }
@@ -722,7 +731,7 @@ private fun DriverScreen(
     val cnicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { cnicDocument = it }
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.DirectionsCar, null, tint = Navy, modifier = Modifier.size(30.dp))
+            OtsLogo(38.dp)
             Spacer(Modifier.width(10.dp))
             Column { Text("Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text("One registered car • multiple routes", color = Muted, fontSize = 12.sp) }
         }
