@@ -85,6 +85,16 @@ internal object SupabaseApi {
         Unit
     }
 
+    suspend fun getProfile(session: Session): JSONObject? = withContext(Dispatchers.IO) {
+        val response = request(
+            "/rest/v1/profiles?id=eq.${session.userId}&select=id,account_type,full_name,phone",
+            "GET",
+            token = session.accessToken
+        )
+        val rows = JSONArray(response)
+        if (rows.length() == 0) null else rows.getJSONObject(0)
+    }
+
     suspend fun submitDriverApplication(
         session: Session,
         name: String,
