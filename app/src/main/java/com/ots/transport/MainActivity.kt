@@ -100,6 +100,22 @@ private fun OTSApp() {
                 tripsLoading = false
             }
         }
+        if (tab == "Bookings") {
+            val active = session
+            if (active == null) {
+                liveBookings = emptyList()
+            } else {
+                bookingsLoading = true
+                bookingsError = ""
+                try {
+                    liveBookings = SupabaseApi.getBookings(active)
+                } catch (e: Exception) {
+                    bookingsError = e.message ?: "Unable to load your bookings."
+                } finally {
+                    bookingsLoading = false
+                }
+            }
+        }
     }
     androidx.activity.compose.BackHandler(enabled = showTicket) { showTicket = false; tab = "Bookings" }
     androidx.activity.compose.BackHandler(enabled = tab == "Seat" && !showTicket) { tab = "Rides" }
@@ -110,7 +126,7 @@ private fun OTSApp() {
         Surface(modifier = Modifier.fillMaxSize(), color = Paper) {
             Column(Modifier.fillMaxSize()) {
                 when {
-                    showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = fareFor(selectedRide ?: sampleRides[0], selectedSeat), onBack = { showTicket = false; tab = "Bookings" })
+                    showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
                     tab == "Rides" -> RidesScreen(route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; tab = "Seat" })
                     tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
                         val trip = selectedRide
@@ -125,6 +141,9 @@ private fun OTSApp() {
                                 try {
                                     val ticketId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat))
                                     booked = true
+                                    ticketReference = ticketId
+                                    ticketFare = fareFor(trip, selectedSeat)
+                                    liveBookings = SupabaseApi.getBookings(active)
                                     showTicket = true
                                     notice = "Your booking is confirmed. Ticket reference: " + ticketId.take(8).uppercase()
                                 } catch (e: Exception) {
@@ -133,7 +152,22 @@ private fun OTSApp() {
                             }
                         }
                     })
-                    tab == "Bookings" -> BookingsScreen(booked = booked, ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onBrowse = { tab = "Home" }, onTicket = { showTicket = true })
+                    tab == "Bookings" -> BookingsScreen(signedIn = session != null, bookings = liveBookings, loading = bookingsLoading, error = bookingsError, onBrowse = { tab = "Rides" }, onLogin = { authMessage = "Sign in to view your bookings."; showOtp = true }, onTicket = { booking ->
+                        selectedRide = Ride(booking.destination, "${booking.origin} → ${booking.destination}", booking.departureAt.replace("T", " ").take(16), "OTS vehicle", "OTS driver", booking.fareTotalPkr, 0, "—", booking.status.uppercase(), booking.id)
+                        selectedSeat = booking.seatLabels.ifBlank { "Seat assigned by driver" }
+                        ticketFare = booking.fareTotalPkr
+                        ticketReference = booking.id
+                        showTicket = true
+                    }, onCancel = { booking ->
+                        val active = session
+                        if (active != null) scope.launch {
+                            try {
+                                SupabaseApi.requestBookingCancellation(active, booking.id)
+                                liveBookings = SupabaseApi.getBookings(active)
+                                notice = "Cancellation request sent. The trip is not cancelled until OTS reviews the request."
+                            } catch (e: Exception) { notice = e.message ?: "Could not request cancellation." }
+                        }
+                    })
                     tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
                     role == "Driver" && tab == "Home" -> DriverScreen(
                         session = session,
@@ -436,45 +470,72 @@ private fun SeatButton(label: String, selected: Boolean, onSeat: (String) -> Uni
 private fun fareFor(ride: Ride, seat: String): Int = if (seat == "Front seat") maxOf(ride.price + 1000, 4000) else ride.price
 
 @Composable
-private fun BookingsScreen(booked: Boolean, ride: Ride, seat: String, onBrowse: () -> Unit, onTicket: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+private fun BookingsScreen(
+    signedIn: Boolean,
+    bookings: List<SupabaseApi.Booking>,
+    loading: Boolean,
+    error: String,
+    onBrowse: () -> Unit,
+    onLogin: () -> Unit,
+    onTicket: (SupabaseApi.Booking) -> Unit,
+    onCancel: (SupabaseApi.Booking) -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Your bookings", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        if (booked) {
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.CheckCircle, null, tint = Mint); Spacer(Modifier.width(8.dp)); Text("BOOKING CONFIRMED (DEMO)", color = Color(0xFF16876E), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
-                    Text(ride.route, color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("${ride.time} • ${ride.car}", color = Muted, fontSize = 12.sp)
-                    Text("$seat • PKR ${fareFor(ride, seat)}", color = Ink, fontWeight = FontWeight.Bold)
-                    Button(onClick = onTicket, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open digital ticket") }
+        Text("Bookings and cancellation requests from your OTS account", color = Muted, fontSize = 12.sp)
+        if (!signedIn) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.Person, null, tint = Navy2, modifier = Modifier.size(40.dp))
+                    Text("Sign in to see your tickets", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Button(onClick = onLogin, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in") }
                 }
             }
-        } else {
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(28.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.Luggage, null, tint = Navy2, modifier = Modifier.size(54.dp))
-                    Text("Your next journey starts here", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Your confirmed demo bookings will appear here.", color = Muted, fontSize = 12.sp)
+        } else if (loading) {
+            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(9.dp)); Text("Loading your bookings…", color = Muted, fontSize = 12.sp) }
+        } else if (bookings.isEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.Luggage, null, tint = Navy2, modifier = Modifier.size(48.dp))
+                    Text(if (error.isBlank()) "No bookings yet" else "Unable to load bookings", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(if (error.isBlank()) "Your confirmed OTS tickets will appear here after you book a published trip." else error, color = Muted, fontSize = 12.sp)
                     Button(onClick = onBrowse, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Find a ride") }
                 }
             }
+        } else {
+            bookings.forEach { booking ->
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(booking.status.replace("_", " ").uppercase(), color = if (booking.status == "confirmed") Color(0xFF16876E) else Color(0xFF9B681F), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                            Text("PKR ${booking.fareTotalPkr}", color = Ink, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Text("${booking.origin} → ${booking.destination}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(booking.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 12.sp)
+                        Text("Seat: ${booking.seatLabels.ifBlank { "Not assigned" }}", color = Navy2, fontSize = 12.sp)
+                        Button(onClick = { onTicket(booking) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open ticket") }
+                        if (booking.status == "confirmed") OutlinedButton(onClick = { onCancel(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Cancel, null); Spacer(Modifier.width(8.dp)); Text("Request cancellation") }
+                        if (booking.status == "cancel_requested") Text("Your cancellation request is waiting for OTS review.", color = Muted, fontSize = 11.sp)
+                    }
+                }
+            }
         }
-        Text("Payments and ticket confirmations are simulated in this demo.", color = Muted, fontSize = 11.sp)
     }
 }
 
 @Composable
-private fun TicketScreen(ride: Ride, seat: String, fare: Int, onBack: () -> Unit) {
+private fun TicketScreen(ride: Ride, seat: String, fare: Int, reference: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }; Text("Digital travel ticket", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold) }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp)) {
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Ink) }
-                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DEMO BOARDING PASS", color = Muted, fontSize = 9.sp) }
+                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DIGITAL BOARDING PASS", color = Muted, fontSize = 9.sp) }
                     Spacer(Modifier.weight(1f)); Icon(Icons.Default.Verified, null, tint = Color(0xFF159C7B))
                 }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
+                Text("BOOKING REF  " + reference.take(12).uppercase(), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text(ride.route, color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 Text(ride.time, color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail("SEAT", seat); TicketDetail("DRIVER", ride.driver); TicketDetail("FARE", "PKR $fare") }
