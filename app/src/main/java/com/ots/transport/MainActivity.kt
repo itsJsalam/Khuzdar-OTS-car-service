@@ -697,6 +697,12 @@ private fun DriverScreen(
     var editVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
     var replacementVehiclePhoto by remember { mutableStateOf<Uri?>(null) }
     val editVehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { replacementVehiclePhoto = it }
+    LaunchedEffect(vehicle?.id, status) {
+        if (vehicle != null && (status == "pending" || status == "rejected")) {
+            make = vehicle.make; model = vehicle.model; year = vehicle.year.toString()
+            plate = vehicle.registration; color = vehicle.color; seats = vehicle.seats.toString(); luggage = vehicle.luggageCapacity
+        }
+    }
     var editCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
     var editDestination by remember { mutableStateOf("") }
     var editPickup by remember { mutableStateOf("") }
@@ -723,6 +729,7 @@ private fun DriverScreen(
                 Text(when (status) {
                     "approved" -> "Approved — you can prepare trip listings."
                     "pending", "submitting" -> "Pending review — publishing is locked."
+                    "vehicle_pending" -> "Vehicle changes pending reapproval — publishing is locked."
                     "rejected" -> "Not approved — contact support for next steps."
                     "suspended" -> "Account suspended — publishing is disabled."
                     "unknown" -> "Unable to check status. Try again when connected."
@@ -734,8 +741,8 @@ private fun DriverScreen(
         if (session == null) {
             Text("Sign in or create an account before submitting driver details.", color = Muted, fontSize = 13.sp)
             Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in / Create account") }
-        } else if (status == "not_submitted" || status == "unknown") {
-            Text("Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        } else if (status == "not_submitted" || status == "unknown" || status == "pending" || status == "rejected") {
+            Text(if (status == "rejected") "Correct and resubmit application" else if (status == "pending") "Update pending application" else "Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Register exactly one car. Your driver photo, CNIC document and car photo are uploaded to private storage for administrator review. Use fictional documents while testing.", color = Muted, fontSize = 12.sp)
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
