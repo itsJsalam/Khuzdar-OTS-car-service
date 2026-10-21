@@ -47,6 +47,14 @@ internal object SupabaseApi {
         val status: String
     )
 
+    data class ApprovedVehicle(
+        val id: String,
+        val make: String,
+        val model: String,
+        val registration: String,
+        val passengerSeats: Int
+    )
+
     suspend fun signUp(email: String, password: String): Pair<Session?, String> = withContext(Dispatchers.IO) {
         val response = request(
             "/auth/v1/signup",
@@ -195,6 +203,59 @@ internal object SupabaseApi {
                 availableSeats = row.getInt("available_seats")
             )
         }
+    }
+
+    suspend fun getApprovedVehicle(session: Session): ApprovedVehicle? = withContext(Dispatchers.IO) {
+        val response = request(
+            "/rest/v1/vehicles?driver_id=eq.${session.userId}&status=eq.approved&select=id,make,model,registration_number,passenger_seats",
+            "GET",
+            token = session.accessToken
+        )
+        val rows = JSONArray(response)
+        if (rows.length() == 0) null else {
+            val row = rows.getJSONObject(0)
+            ApprovedVehicle(
+                id = row.getString("id"),
+                make = row.getString("make"),
+                model = row.getString("model"),
+                registration = row.getString("registration_number"),
+                passengerSeats = row.getInt("passenger_seats")
+            )
+        }
+    }
+
+    suspend fun publishTrip(
+        session: Session,
+        vehicleId: String,
+        destination: String,
+        pickup: String,
+        dropoff: String,
+        departureAt: String,
+        farePkr: Int,
+        seats: Int
+    ): String = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("driver_id", session.userId)
+            .put("vehicle_id", vehicleId)
+            .put("origin", "Khuzdar")
+            .put("destination", destination)
+            .put("pickup_point", pickup.trim())
+            .put("dropoff_point", dropoff.trim())
+            .put("departure_at", departureAt)
+            .put("fare_pkr", farePkr)
+            .put("total_seats", seats)
+            .put("available_seats", seats)
+            .put("status", "published")
+        val response = request(
+            "/rest/v1/trips",
+            "POST",
+            token = session.accessToken,
+            body = payload,
+            prefer = "return=representation"
+        )
+        val rows = JSONArray(response)
+        if (rows.length() == 0) throw IllegalStateException("Trip publishing did not return a trip ID.")
+        rows.getJSONObject(0).getString("id")
     }
 
     suspend fun getBookings(session: Session): List<Booking> = withContext(Dispatchers.IO) {
