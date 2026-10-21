@@ -225,7 +225,8 @@ internal object SupabaseApi {
             is JSONArray -> if (vehicleValue.length() > 0) vehicleValue.getJSONObject(0) else JSONObject()
             else -> JSONObject()
         }
-        vehicle.optString("status", "pending")
+        val vehicleStatus = vehicle.optString("status", "pending")
+        if (vehicleStatus == "pending") "vehicle_pending" else vehicleStatus
     }
 
     suspend fun getApprovedTrips(session: Session? = null): List<Trip> = withContext(Dispatchers.IO) {
