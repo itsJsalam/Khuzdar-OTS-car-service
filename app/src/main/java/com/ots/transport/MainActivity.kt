@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null)
+private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null, val totalSeats: Int = 4, val pickupPoint: String = "Khuzdar", val dropoffPoint: String? = null)
 private val sampleRides = listOf(
     Ride("Karachi", "Khuzdar → Karachi", "Tomorrow • 06:30 AM", "Toyota Corolla • White", "Naveed Baloch", 3000, 3, "4.9", "POPULAR"),
     Ride("Quetta", "Khuzdar → Quetta", "Tomorrow • 08:00 AM", "Honda City • Silver", "Rahim Shah", 2500, 2, "4.8", "ON TIME"),
@@ -164,7 +164,7 @@ private fun OTSApp(initialSession: SupabaseApi.Session?) {
                         } else {
                             scope.launch {
                                 try {
-                                    val ticketId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat))
+                                    val ticketId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat), trip.pickupPoint, trip.dropoffPoint ?: trip.city, luggage)
                                     booked = true
                                     ticketReference = ticketId
                                     ticketFare = fareFor(trip, selectedSeat)
@@ -485,10 +485,13 @@ private fun RidesScreen(
                         seats = trip.availableSeats,
                         rating = "—",
                         tag = "AVAILABLE",
-                        tripId = trip.id
+                        tripId = trip.id,
+                        totalSeats = trip.totalSeats,
+                        pickupPoint = trip.pickupPoint,
+                        dropoffPoint = trip.dropoffPoint
                     ),
                     onClick = {
-                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", trip.departureAt.replace("T", " ").take(16), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id))
+                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", trip.departureAt.replace("T", " ").take(16), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id, trip.totalSeats, trip.pickupPoint, trip.dropoffPoint))
                     }
                 )
             }
@@ -535,33 +538,33 @@ private fun SeatScreen(ride: Ride, seat: String, onSeat: (String) -> Unit, drop:
                 Box(Modifier.width(260.dp).clip(RoundedCornerShape(28.dp)).background(Color(0xFF203D54)).padding(14.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("FRONT", color = Color(0xFFB8C9D7), fontSize = 9.sp); Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFFB8C9D7), modifier = Modifier.size(18.dp)) }
-                        Spacer(Modifier.height(12.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) { SeatButton("Front seat", seat == "Front seat", onSeat, true) }
                         Spacer(Modifier.height(14.dp))
-                        HorizontalDivider(color = Color.White.copy(alpha = .15f))
-                        Spacer(Modifier.height(14.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            SeatButton("Rear left", seat == "Rear left", onSeat, true)
-                            SeatButton("Rear middle", seat == "Rear middle", onSeat, false)
-                            SeatButton("Rear right", seat == "Rear right", onSeat, true)
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            (1..ride.totalSeats.coerceIn(1, 20)).forEach { number ->
+                                val label = "Seat " + number
+                                SeatButton(label, seat == label, onSeat, true)
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text("Tap an available seat to select it", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                        Text("Seat count matches the approved vehicle capacity. The database prevents double-booking a seat.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
                     }
                 }
             }
         }
-        Text("Drop-off destination", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            listOf(ride.city, "Larkana", "Ratto Dero", "Gwadar", "Turbat").distinct().forEach { city ->
-                FilterChip(selected = drop == city, onClick = { onDrop(city) }, label = { Text(city) })
+        Text("Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("PICKUP", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.pickupPoint, color = Ink, fontWeight = FontWeight.SemiBold) }
+                Icon(Icons.Default.ArrowForward, null, tint = Gold)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) { Text("DROP-OFF", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.dropoffPoint ?: ride.city, color = Ink, fontWeight = FontWeight.SemiBold) }
             }
         }
         Text("Luggage", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Small bag", "Medium bag", "Large box").forEach { item -> FilterChip(selected = luggage == item, onClick = { onLuggage(item) }, label = { Text(item, fontSize = 11.sp) }) } }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("TOTAL DEMO FARE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text("PKR ${fareFor(ride, seat)}", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black); Text("Includes selected seat • no payment taken", color = Muted, fontSize = 10.sp) }
+                Column(Modifier.weight(1f)) { Text("FARE PER SEAT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text("PKR ${fareFor(ride, seat)}", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black); Text("No online payment is collected in this version.", color = Muted, fontSize = 10.sp) }
                 Button(onClick = onBook, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Book now") }
             }
         }
@@ -578,7 +581,7 @@ private fun SeatButton(label: String, selected: Boolean, onSeat: (String) -> Uni
     }
 }
 
-private fun fareFor(ride: Ride, seat: String): Int = if (seat == "Front seat") maxOf(ride.price + 1000, 4000) else ride.price
+private fun fareFor(ride: Ride, seat: String): Int = ride.price
 
 @Composable
 private fun BookingsScreen(
