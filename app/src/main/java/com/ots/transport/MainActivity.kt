@@ -377,10 +377,9 @@ private fun HomeScreen(role: String, onRole: (String) -> Unit, onRoute: (String)
             Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Find available rides", fontWeight = FontWeight.Bold) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("4", "Routes", Icons.Default.Route, Modifier.weight(1f))
-                StatCard("24/7", "Trip support*", Icons.Default.SupportAgent, Modifier.weight(1f))
+                StatCard("OTS", "Driver review", Icons.Default.Verified, Modifier.weight(1f))
                 StatCard("PKR", "Clear fares", Icons.Default.Payments, Modifier.weight(1f))
             }
-            Text("*Demo concept only. Live support is not connected.", color = Muted, fontSize = 10.sp)
         }
     }
 }
@@ -599,8 +598,8 @@ private fun TicketScreen(ride: Ride, seat: String, fare: Int, reference: String,
                 Text(ride.time, color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail("SEAT", seat); TicketDetail("DRIVER", ride.driver); TicketDetail("FARE", "PKR $fare") }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Info, null, tint = Color(0xFF9B681F)); Spacer(Modifier.width(7.dp)); Text("DEMO ONLY • NOT VALID FOR REAL TRAVEL", color = Color(0xFF9B681F), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
-                Text("Booking reference: OTS-DEMO-2048", color = Muted, fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Info, null, tint = Color(0xFF16876E)); Spacer(Modifier.width(7.dp)); Text("Keep this booking reference for your journey.", color = Color(0xFF16876E), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                Text("Booking reference: " + reference, color = Muted, fontSize = 11.sp)
             }
         }
         Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)) { Text("Done", fontWeight = FontWeight.Bold) }
