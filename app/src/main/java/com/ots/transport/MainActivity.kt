@@ -61,6 +61,25 @@ private fun OTSApp() {
     var showOtp by remember { mutableStateOf(false) }
     var showTicket by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
+    var authEmail by remember { mutableStateOf("") }
+    var authPassword by remember { mutableStateOf("") }
+    var authName by remember { mutableStateOf("") }
+    var authPhone by remember { mutableStateOf("") }
+    var authIsSignup by remember { mutableStateOf(false) }
+    var authBusy by remember { mutableStateOf(false) }
+    var authMessage by remember { mutableStateOf("") }
+    var session by remember { mutableStateOf<SupabaseApi.Session?>(null) }
+    var driverStatus by remember { mutableStateOf("not_submitted") }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(session?.userId, role) {
+        val active = session
+        if (active != null && role == "Driver") {
+            driverStatus = try { SupabaseApi.getDriverStatus(active) } catch (_: Exception) { "unknown" }
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = showTicket) { showTicket = false; tab = "Bookings" }
+    androidx.activity.compose.BackHandler(enabled = tab == "Seat" && !showTicket) { tab = "Rides" }
 
     MaterialTheme(
         colorScheme = darkColorScheme(primary = Gold, secondary = Mint, background = Ink, surface = Navy, onPrimary = Ink, onBackground = Color.White, onSurface = Color.White)
@@ -70,10 +89,33 @@ private fun OTSApp() {
                 when {
                     showTicket -> TicketScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = fareFor(selectedRide ?: sampleRides[0], selectedSeat), onBack = { showTicket = false; tab = "Bookings" })
                     tab == "Rides" -> RidesScreen(route = selectedRoute, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; tab = "Seat" })
-                    tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = { booked = true; showTicket = true; notice = "Demo booking confirmed — no payment was taken." })
+                    tab == "Seat" -> SeatScreen(ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = { booked = true; showTicket = true; notice = "This ticket is a local preview. Real booking and seat locking will be enabled after the booking workflow is connected." })
                     tab == "Bookings" -> BookingsScreen(booked = booked, ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onBrowse = { tab = "Home" }, onTicket = { showTicket = true })
-                    tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { showOtp = true })
-                    role == "Driver" && tab == "Home" -> DriverScreen(onPublish = { notice = "Your demo ride was saved locally for this session." })
+                    tab == "Profile" -> ProfileScreen(role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
+                    role == "Driver" && tab == "Home" -> DriverScreen(
+                        session = session,
+                        status = driverStatus,
+                        onLogin = { authMessage = "Sign in or create an account before submitting a driver application."; showOtp = true },
+                        onSubmit = { name, phone, make, model, year, plate, color, seats, luggageCapacity ->
+                            val active = session
+                            if (active == null) {
+                                authMessage = "Please sign in first."
+                                showOtp = true
+                            } else {
+                                scope.launch {
+                                    driverStatus = "submitting"
+                                    try {
+                                        SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity)
+                                        driverStatus = "pending"
+                                        notice = "Your driver and one-car application has been submitted. You cannot publish trips until the administrator approves it."
+                                    } catch (e: Exception) {
+                                        driverStatus = "not_submitted"
+                                        notice = e.message ?: "The application could not be submitted. Please check your connection and try again."
+                                    }
+                                }
+                            }
+                        }
+                    )
                     else -> HomeScreen(role = role, onRole = { role = it }, onRoute = { selectedRoute = it; tab = "Rides" }, onSearch = { tab = "Rides" }, onDriver = { role = "Driver"; tab = "Home" })
                 }
                 if (!showTicket && tab != "Seat") {
@@ -85,11 +127,71 @@ private fun OTSApp() {
                 }
             }
             if (showOtp) AlertDialog(
-                onDismissRequest = { showOtp = false },
-                title = { Text("Welcome to OTS") },
-                text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("Account sign-in is not connected yet. No SMS or payment service is active.") ; OutlinedTextField(value = "+92 300 0000000", onValueChange = {}, label = { Text("Phone number") }, readOnly = true); OutlinedTextField(value = "1234", onValueChange = {}, label = { Text("Demo OTP") }, readOnly = true) } },
-                confirmButton = { Button(onClick = { showOtp = false; notice = "Demo login successful." }) { Text("Verify & enter") } },
-                dismissButton = { TextButton(onClick = { showOtp = false }) { Text("Cancel") } }
+                onDismissRequest = { if (!authBusy) showOtp = false },
+                title = { Text(if (authIsSignup) "Create your OTS account" else "Sign in to OTS") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text(if (role == "Driver") "Driver access • approval is required before trip publishing." else "Passenger access • use an email and password. No paid SMS service is needed.")
+                        if (authIsSignup) {
+                            OutlinedTextField(value = authName, onValueChange = { authName = it }, label = { Text("Full name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = authPhone, onValueChange = { authPhone = it }, label = { Text("Phone number (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        }
+                        OutlinedTextField(value = authEmail, onValueChange = { authEmail = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = authPassword, onValueChange = { authPassword = it }, label = { Text("Password (at least 6 characters)") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+                        if (authMessage.isNotBlank()) Text(authMessage, color = if (authMessage.startsWith("Account created")) Color(0xFF14785E) else Color(0xFF9A4D20), fontSize = 12.sp)
+                        if (authBusy) Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)); Text("Connecting securely…", fontSize = 12.sp) }
+                    }
+                },
+                confirmButton = {
+                    Button(enabled = !authBusy, onClick = {
+                        if (authEmail.isBlank() || authPassword.length < 6 || (authIsSignup && authName.isBlank())) {
+                            authMessage = if (authIsSignup) "Enter your name, a valid email, and a password of at least 6 characters." else "Enter your email and a password of at least 6 characters."
+                        } else {
+                            scope.launch {
+                                authBusy = true
+                                authMessage = ""
+                                try {
+                                    if (authIsSignup) {
+                                        val result = SupabaseApi.signUp(authEmail, authPassword)
+                                        val created = result.first
+                                        if (created == null) {
+                                            authMessage = result.second
+                                        } else {
+                                            SupabaseApi.saveProfile(created, authName, authPhone, role)
+                                            session = created
+                                            showOtp = false
+                                            notice = "Your OTS account is ready."
+                                        }
+                                    } else {
+                                        val signedIn = SupabaseApi.signIn(authEmail, authPassword)
+                                        val profile = SupabaseApi.getProfile(signedIn)
+                                        if (profile == null) {
+                                            val name = authName.ifBlank { authEmail.substringBefore("@") }
+                                            SupabaseApi.saveProfile(signedIn, name, authPhone, role)
+                                        } else {
+                                            authName = profile.optString("full_name")
+                                            authPhone = profile.optString("phone")
+                                            role = if (profile.optString("account_type") == "driver") "Driver" else "Passenger"
+                                        }
+                                        session = signedIn
+                                        showOtp = false
+                                        notice = "You are signed in to OTS Transport."
+                                    }
+                                } catch (e: Exception) {
+                                    authMessage = e.message ?: "Unable to connect. Please try again."
+                                } finally {
+                                    authBusy = false
+                                }
+                            }
+                        }
+                    }) { Text(if (authIsSignup) "Create account" else "Sign in") }
+                },
+                dismissButton = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) { Text(if (authIsSignup) "I have an account" else "Create account") }
+                        TextButton(enabled = !authBusy, onClick = { showOtp = false }) { Text("Back") }
+                    }
+                }
             )
             if (notice.isNotBlank()) AlertDialog(onDismissRequest = { notice = "" }, title = { Text("OTS Transport") }, text = { Text(notice) }, confirmButton = { TextButton(onClick = { notice = "" }) { Text("OK") } })
         }
@@ -312,26 +414,75 @@ private fun TicketDetail(label: String, value: String) {
 }
 
 @Composable
-private fun DriverScreen(onPublish: () -> Unit) {
-    var car by remember { mutableStateOf("Toyota Corolla") }
-    var plate by remember { mutableStateOf("BLA-2048") }
-    var route by remember { mutableStateOf("Karachi") }
-    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        Text("Driver cockpit", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
-            Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp).clip(CircleShape).background(Gold), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Ink, modifier = Modifier.size(30.dp)) }
-                Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Driver application", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp); Text("Approval required before trip publishing", color = Color(0xFFB9CBD9), fontSize = 10.sp) }
+private fun DriverScreen(
+    session: SupabaseApi.Session?,
+    status: String,
+    onLogin: () -> Unit,
+    onSubmit: (String, String, Int, String, String, String, Int, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var make by remember { mutableStateOf("Toyota") }
+    var model by remember { mutableStateOf("") }
+    var year by remember { mutableStateOf("2020") }
+    var plate by remember { mutableStateOf("") }
+    var color by remember { mutableStateOf("") }
+    var seats by remember { mutableStateOf("3") }
+    var luggage by remember { mutableStateOf("Standard") }
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.DirectionsCar, null, tint = Navy, modifier = Modifier.size(30.dp))
+            Spacer(Modifier.width(10.dp))
+            Column { Text("Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text("One registered car • multiple routes", color = Muted, fontSize = 12.sp) }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("APPLICATION STATUS", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                Text(when (status) {
+                    "approved" -> "Approved — you can prepare trip listings."
+                    "pending", "submitting" -> "Pending review — publishing is locked."
+                    "rejected" -> "Not approved — contact support for next steps."
+                    "suspended" -> "Account suspended — publishing is disabled."
+                    "unknown" -> "Unable to check status. Try again when connected."
+                    else -> "Not registered as a driver yet."
+                }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Trips stay locked until an administrator approves your driver application and car.", color = Color(0xFFB9CBD9), fontSize = 11.sp)
             }
         }
-        Text("Publish a ride", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        OutlinedTextField(value = car, onValueChange = { car = it }, label = { Text("Car model") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(value = plate, onValueChange = { plate = it }, label = { Text("Registration plate (demo)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Text("Route", color = Ink, fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) { listOf("Karachi", "Quetta", "Larkana", "Gwadar").forEach { FilterChip(selected = route == it, onClick = { route = it }, label = { Text(it) }) } }
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp)) { Text("Seat capacity", color = Ink, fontWeight = FontWeight.Bold); Text("3 passenger seats • Sample departure 06:30 AM", color = Muted, fontSize = 12.sp) } }
-        Button(onClick = onPublish, enabled = false, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink, disabledContainerColor = Color(0xFF9AA7B4))) { Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Publishing locked until approval") }
-        Text("Register one car only. Submit your driver details and vehicle for review. Do not enter real CNIC details until secure document upload is connected.", color = Muted, fontSize = 11.sp)
+        if (session == null) {
+            Text("Sign in or create an account before submitting driver details.", color = Muted, fontSize = 13.sp)
+            Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in / Create account") }
+        } else if (status == "not_submitted" || status == "unknown") {
+            Text("Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text("Register exactly one car. Use test details while trying the app. Secure driver-photo and CNIC-document upload is still being connected; do not type your CNIC number here.", color = Muted, fontSize = 12.sp)
+            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text("Car make") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Model") }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                OutlinedTextField(value = year, onValueChange = { year = it.filter { c -> c.isDigit() }.take(4) }, label = { Text("Year") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = color, onValueChange = { color = it }, label = { Text("Color") }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            OutlinedTextField(value = plate, onValueChange = { plate = it.uppercase() }, label = { Text("Registration number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text("Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
+            }
+            Button(
+                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage) },
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && year.toIntOrNull() in 1980..2100 && seats.toIntOrNull() in 1..20,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink)
+            ) { Text(if (status == "submitting") "Submitting…" else "Submit for approval") }
+        } else {
+            Text("Registered vehicle", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text("Your account has one registered car. Vehicle edits and document uploads will be enabled in the next connected workflow.", color = Muted, fontSize = 12.sp)
+            Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF9AA7B4))) {
+                Icon(Icons.Default.Lock, null); Spacer(Modifier.width(8.dp)); Text("Trip publishing requires full approval workflow")
+            }
+        }
     }
 }
 
