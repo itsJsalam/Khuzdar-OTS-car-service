@@ -37,6 +37,16 @@ internal object SupabaseApi {
         val availableSeats: Int
     )
 
+    data class Booking(
+        val id: String,
+        val origin: String,
+        val destination: String,
+        val departureAt: String,
+        val seatLabels: String,
+        val fareTotalPkr: Int,
+        val status: String
+    )
+
     suspend fun signUp(email: String, password: String): Pair<Session?, String> = withContext(Dispatchers.IO) {
         val response = request(
             "/auth/v1/signup",
@@ -185,6 +195,45 @@ internal object SupabaseApi {
                 availableSeats = row.getInt("available_seats")
             )
         }
+    }
+
+    suspend fun getBookings(session: Session): List<Booking> = withContext(Dispatchers.IO) {
+        val response = request(
+            "/rest/v1/bookings?select=id,seat_labels,fare_total_pkr,status,trips(origin,destination,departure_at)&order=created_at.desc",
+            "GET",
+            token = session.accessToken
+        )
+        val rows = JSONArray(response)
+        (0 until rows.length()).map { i ->
+            val row = rows.getJSONObject(i)
+            val tripValue = row.opt("trips")
+            val trip = when (tripValue) {
+                is JSONObject -> tripValue
+                is JSONArray -> if (tripValue.length() > 0) tripValue.getJSONObject(0) else JSONObject()
+                else -> JSONObject()
+            }
+            val seats = row.optJSONArray("seat_labels") ?: JSONArray()
+            Booking(
+                id = row.getString("id"),
+                origin = trip.optString("origin", "Unknown origin"),
+                destination = trip.optString("destination", "Unknown destination"),
+                departureAt = trip.optString("departure_at", ""),
+                seatLabels = (0 until seats.length()).joinToString(", ") { seats.optString(it) },
+                fareTotalPkr = row.optInt("fare_total_pkr"),
+                status = row.optString("status", "confirmed")
+            )
+        }
+    }
+
+    suspend fun requestBookingCancellation(session: Session, bookingId: String) = withContext(Dispatchers.IO) {
+        request(
+            "/rest/v1/bookings?id=eq.$bookingId",
+            "PATCH",
+            token = session.accessToken,
+            body = JSONObject().put("status", "cancel_requested"),
+            prefer = "return=minimal"
+        )
+        Unit
     }
 
     suspend fun createBooking(session: Session, tripId: String, seatLabel: String, farePkr: Int): String = withContext(Dispatchers.IO) {
