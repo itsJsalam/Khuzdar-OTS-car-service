@@ -653,7 +653,8 @@ private fun RidesScreen(
             val filtered = trips.filter { route == "All" || it.destination.equals(route, ignoreCase = true) }
             filtered.forEach { trip ->
                 RideCard(
-                    Ride(
+                    isUrdu = isUrdu,
+                    ride = Ride(
                         city = trip.destination,
                         route = "${trip.origin} → ${trip.destination}",
                         time = trip.departureAt.replace("T", " ").take(16),
@@ -688,7 +689,7 @@ private fun RidesScreen(
 }
 
 @Composable
-private fun RideCard(ride: Ride, onClick: () -> Unit) {
+private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(45.dp).clip(RoundedCornerShape(14.dp)).background(Navy), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(27.dp)) }
@@ -698,10 +699,10 @@ private fun RideCard(ride: Ride, onClick: () -> Unit) {
         }
         HorizontalDivider(color = Color(0xFFE9EEF3))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(ride.car, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text("Driver: ${ride.driver}  •  ★ ${ride.rating}", color = Muted, fontSize = 10.sp) }
-            Column(horizontalAlignment = Alignment.End) { Text("PKR ${ride.price}", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold); Text("${ride.seats} seats left", color = Color(0xFF16876E), fontSize = 10.sp) }
+            Column(Modifier.weight(1f)) { Text(ride.car, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text((if (isUrdu) "ڈرائیور: " else "Driver: ") + "${ride.driver}  •  ★ ${ride.rating}", color = Muted, fontSize = 10.sp) }
+            Column(horizontalAlignment = Alignment.End) { Text("PKR ${ride.price}", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "${ride.seats} نشستیں باقی" else "${ride.seats} seats left", color = Color(0xFF16876E), fontSize = 10.sp) }
         }
-        Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Choose seats"); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp)) }
+        Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "نشستیں منتخب کریں" else "Choose seats"); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp)) }
     }
 }
 
@@ -732,21 +733,21 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
         Text(if (isUrdu) "پک اَپ اور منزل" else "Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("PICKUP", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.pickupPoint, color = Ink, fontWeight = FontWeight.SemiBold) }
+                Column(Modifier.weight(1f)) { Text(if (isUrdu) "پک اَپ" else "PICKUP", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.pickupPoint, color = Ink, fontWeight = FontWeight.SemiBold) }
                 Icon(Icons.Default.ArrowForward, null, tint = Gold)
                 Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) { Text("DROP-OFF", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.dropoffPoint ?: ride.city, color = Ink, fontWeight = FontWeight.SemiBold) }
+                Column(Modifier.weight(1f)) { Text(if (isUrdu) "منزل" else "DROP-OFF", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(ride.dropoffPoint ?: ride.city, color = Ink, fontWeight = FontWeight.SemiBold) }
             }
         }
         Text(if (isUrdu) "سامان" else "Luggage", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Small bag", "Medium bag", "Large box").forEach { item -> FilterChip(selected = luggage == item, onClick = { onLuggage(item) }, label = { Text(item, fontSize = 11.sp) }) } }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("FARE PER SEAT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text("PKR ${fareFor(ride, seat)}", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black); Text("No online payment is collected in this version.", color = Muted, fontSize = 10.sp) }
+                Column(Modifier.weight(1f)) { Text(if (isUrdu) "فی نشست کرایہ" else "FARE PER SEAT", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text("PKR ${fareFor(ride, seat)}", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black); Text(if (isUrdu) "اس ورژن میں آن لائن ادائیگی نہیں لی جاتی۔" else "No online payment is collected in this version.", color = Muted, fontSize = 10.sp) }
                 Button(onClick = onBook, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "ابھی بک کریں" else "Book now") }
             }
         }
-        Text("Before boarding, compare the driver and car details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
+        Text(if (isUrdu) "سفر سے پہلے ڈرائیور اور گاڑی کی تفصیلات اپنے ٹکٹ سے ملائیں۔" else "Before boarding, compare the driver and car details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
     }
 }
 
