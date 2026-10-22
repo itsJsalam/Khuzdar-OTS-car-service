@@ -96,24 +96,6 @@ private fun OTSApp(
     onOAuthCallbackHandled: () -> Unit
 ) {
     val appContext = LocalContext.current
-    val locationShareLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val location = try {
-            if (permissions.values.any { it }) {
-                val manager = appContext.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
-                manager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            } else null
-        } catch (_: SecurityException) { null } catch (_: Exception) { null }
-        val rideToShare = selectedRide ?: sampleRides[0]
-        val mapLink = if (location != null) {
-            "https://maps.google.com/?q=${location.latitude},${location.longitude}"
-        } else {
-            "https://www.google.com/maps/dir/?api=1&origin=Khuzdar&destination=" + java.net.URLEncoder.encode(rideToShare.city, "UTF-8")
-        }
-        val text = "OTS Transport trip: ${rideToShare.route}\nBooking reference: ${ticketReference.ifBlank { "not booked yet" }}\nMy location / route: $mapLink"
-        val shareIntent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
-        appContext.startActivity(Intent.createChooser(shareIntent, "Share OTS trip location"))
-    }
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
     var language by remember { mutableStateOf(appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).getString("language", "").orEmpty()) }
@@ -157,6 +139,24 @@ private fun OTSApp(
     var tripsLoading by remember { mutableStateOf(false) }
     var tripsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val locationShareLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val location = try {
+            if (permissions.values.any { it }) {
+                val manager = appContext.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+                manager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            } else null
+        } catch (_: SecurityException) { null } catch (_: Exception) { null }
+        val rideToShare = selectedRide ?: sampleRides[0]
+        val mapLink = if (location != null) {
+            "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+        } else {
+            "https://www.google.com/maps/dir/?api=1&origin=Khuzdar&destination=" + java.net.URLEncoder.encode(rideToShare.city, "UTF-8")
+        }
+        val text = "OTS Transport trip: ${rideToShare.route}\nBooking reference: ${ticketReference.ifBlank { "not booked yet" }}\nMy location / route: $mapLink"
+        val shareIntent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        appContext.startActivity(Intent.createChooser(shareIntent, "Share OTS trip location"))
+    }
 
     LaunchedEffect(oauthCallback) {
         val callback = oauthCallback ?: return@LaunchedEffect
