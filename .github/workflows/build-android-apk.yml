@@ -2,7 +2,7 @@ name: Build OTS Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, design-reference-alignment ]
   workflow_dispatch:
 
 permissions:
