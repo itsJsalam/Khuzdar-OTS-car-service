@@ -793,7 +793,7 @@ private fun PaymentScreen(
             IconButton(onClick = onBack, enabled = !submitting) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }
             Column {
                 Text(if (isUrdu) "ادائیگی کا طریقہ" else "Payment method", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Booking \${bookingId.take(8).uppercase()}", color = Muted, fontSize = 12.sp)
+                Text("Booking ${bookingId.take(8).uppercase()}", color = Muted, fontSize = 12.sp)
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(22.dp)) {
@@ -816,7 +816,7 @@ private fun PaymentScreen(
                 if (submitted) {
                     Text("Your reference is waiting for an OTS administrator to check the actual transfer. Your ticket is not confirmed until that review is complete.", color = Muted, fontSize = 13.sp)
                 } else {
-                    Text("1. Open \${if (method == "easypaisa") "Easypaisa" else "JazzCash"} on your phone.\\n2. Transfer exactly PKR $amount to 03312717330.\\n3. Enter the transaction reference shown by your payment app below.", color = Muted, fontSize = 13.sp)
+                    Text("1. Open ${if (method == "easypaisa") "Easypaisa" else "JazzCash"} on your phone.\\n2. Transfer exactly PKR $amount to 03312717330.\\n3. Enter the transaction reference shown by your payment app below.", color = Muted, fontSize = 13.sp)
                     OutlinedTextField(
                         value = transactionReference,
                         onValueChange = { transactionReference = it.take(120) },
