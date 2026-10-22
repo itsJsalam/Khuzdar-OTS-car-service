@@ -50,7 +50,9 @@ internal object SupabaseApi {
         val departureAt: String,
         val seatLabels: String,
         val fareTotalPkr: Int,
-        val status: String
+        val status: String,
+        val paymentStatus: String = "",
+        val paymentMethod: String = ""
     )
 
     data class ApprovedVehicle(
@@ -449,7 +451,7 @@ internal object SupabaseApi {
 
     suspend fun getBookings(session: Session): List<Booking> = withContext(Dispatchers.IO) {
         val response = request(
-            "/rest/v1/bookings?select=id,seat_labels,fare_total_pkr,status,trips(origin,destination,departure_at)&order=created_at.desc",
+            "/rest/v1/bookings?select=id,seat_labels,fare_total_pkr,status,trips(origin,destination,departure_at),payment_submissions(status,payment_method)&order=created_at.desc",
             "GET",
             token = session.accessToken
         )
@@ -463,6 +465,12 @@ internal object SupabaseApi {
                 else -> JSONObject()
             }
             val seats = row.optJSONArray("seat_labels") ?: JSONArray()
+            val paymentValue = row.opt("payment_submissions")
+            val payment = when (paymentValue) {
+                is JSONObject -> paymentValue
+                is JSONArray -> if (paymentValue.length() > 0) paymentValue.getJSONObject(0) else JSONObject()
+                else -> JSONObject()
+            }
             Booking(
                 id = row.getString("id"),
                 origin = trip.optString("origin", "Unknown origin"),
@@ -470,7 +478,9 @@ internal object SupabaseApi {
                 departureAt = trip.optString("departure_at", ""),
                 seatLabels = (0 until seats.length()).joinToString(", ") { seats.optString(it) },
                 fareTotalPkr = row.optInt("fare_total_pkr"),
-                status = row.optString("status", "confirmed")
+                status = row.optString("status", "confirmed"),
+                paymentStatus = payment.optString("status", ""),
+                paymentMethod = payment.optString("payment_method", "")
             )
         }
     }
