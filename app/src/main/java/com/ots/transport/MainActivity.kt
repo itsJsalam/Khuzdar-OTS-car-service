@@ -430,20 +430,26 @@ private fun OTSApp(
                                 }
                             }
                         },
-                        onPublishTrip = { destination, pickup, dropoff, date, time, fare, seats ->
+                        onPublishTrip = { destination, pickup, dropoff, date, time, arrivalText, fare, seats ->
                             val active = session
                             val departure = toDepartureIso(date, time)
+                            val arrival = if (arrivalText.isBlank()) null else {
+                                val parts = arrivalText.split(" ")
+                                if (parts.size == 2) toDepartureIso(parts[0], parts[1]) else null
+                            }
                             if (active == null) {
                                 authMessage = "Please sign in first."
                                 showOtp = true
                             } else if (departure == null) {
                                 notice = "Enter a valid future departure date as YYYY-MM-DD and time as HH:MM (24-hour)."
+                            } else if (arrivalText.isNotBlank() && (arrival == null || arrival <= departure)) {
+                                notice = "Estimated arrival must be a valid date/time after departure, using YYYY-MM-DD HH:MM."
                             } else {
                                 scope.launch {
                                     try {
                                         val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your car has not been approved yet.")
                                         if (seats > vehicle.passengerSeats) throw IllegalStateException("This car is approved for only ${vehicle.passengerSeats} passenger seats.")
-                                        val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, fare, seats)
+                                        val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, arrival, fare, seats)
                                         notice = "Trip published successfully. Reference: " + tripId.take(8).uppercase()
                                         try { driverTrips = SupabaseApi.getDriverTrips(active) } catch (_: Exception) { }
                                     } catch (e: Exception) {
@@ -702,6 +708,12 @@ private fun SettingsScreen(
     }
 }
 
+private fun formatTripTime(departureAt: String, arrivalAt: String?): String {
+    val departure = departureAt.replace("T", " ").take(16)
+    val arrival = arrivalAt?.replace("T", " ")?.take(16)
+    return if (arrival.isNullOrBlank()) departure else "$departure • Arrives $arrival"
+}
+
 private fun toDepartureIso(date: String, time: String): String? {
     return try {
         val zone = TimeZone.getTimeZone("Asia/Karachi")
@@ -816,7 +828,7 @@ private fun RidesScreen(
                     ride = Ride(
                         city = trip.destination,
                         route = "${trip.origin} → ${trip.destination}",
-                        time = trip.departureAt.replace("T", " ").take(16),
+                        time = formatTripTime(trip.departureAt, trip.arrivalAt),
                         car = "Verified vehicle",
                         driver = "Approved OTS driver",
                         price = trip.farePkr,
@@ -829,7 +841,7 @@ private fun RidesScreen(
                         dropoffPoint = trip.dropoffPoint
                     ),
                     onClick = {
-                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", trip.departureAt.replace("T", " ").take(16), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id, trip.totalSeats, trip.pickupPoint, trip.dropoffPoint))
+                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", formatTripTime(trip.departureAt, trip.arrivalAt), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id, trip.totalSeats, trip.pickupPoint, trip.dropoffPoint))
                     }
                 )
             }
@@ -1125,7 +1137,7 @@ private fun BookingsScreen(
                             Text("PKR ${booking.fareTotalPkr}", color = Ink, fontWeight = FontWeight.ExtraBold)
                         }
                         Text("${booking.origin} → ${booking.destination}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(booking.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 12.sp)
+                        Text(formatTripTime(booking.departureAt, booking.arrivalAt), color = Muted, fontSize = 12.sp)
                         Text("Seat: ${booking.seatLabels.ifBlank { "Not assigned" }}", color = Navy2, fontSize = 12.sp)
                         if (booking.status == "confirmed") {
                             Button(onClick = { onTicket(booking) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open confirmed ticket") }
@@ -1230,7 +1242,7 @@ private fun DriverScreen(
     onUpdateVehicle: (SupabaseApi.Vehicle, String, String, Int, String, String, Int, String, List<Uri>) -> Unit,
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
     onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
-    onPublishTrip: (String, String, String, String, String, Int, Int) -> Unit,
+    onPublishTrip: (String, String, String, String, String, String, Int, Int) -> Unit,
     onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, List<Uri>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -1247,6 +1259,7 @@ private fun DriverScreen(
     var dropoffPoint by remember { mutableStateOf("Karachi") }
     var departureDate by remember { mutableStateOf("") }
     var departureTime by remember { mutableStateOf("06:30") }
+    var estimatedArrival by remember { mutableStateOf("") }
     var tripFare by remember { mutableStateOf("") }
     var tripSeats by remember { mutableStateOf("4") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
@@ -1360,13 +1373,21 @@ private fun DriverScreen(
                 OutlinedTextField(value = departureDate, onValueChange = { departureDate = it.take(10) }, label = { Text(if (isUrdu) "روانگی کی تاریخ (YYYY-MM-DD)" else "Departure date (YYYY-MM-DD)") }, modifier = Modifier.weight(1.3f), singleLine = true)
                 OutlinedTextField(value = departureTime, onValueChange = { departureTime = it.take(5) }, label = { Text(if (isUrdu) "وقت (HH:MM)" else "Time (HH:MM)") }, modifier = Modifier.weight(1f), singleLine = true)
             }
+            OutlinedTextField(
+                value = estimatedArrival,
+                onValueChange = { estimatedArrival = it.take(16) },
+                label = { Text(if (isUrdu) "متوقع آمد (YYYY-MM-DD HH:MM، اختیاری)" else "Estimated arrival (YYYY-MM-DD HH:MM, optional)") },
+                placeholder = { Text("2026-10-23 14:30") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text(if (isUrdu) "فی نشست کرایہ (PKR)" else "Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Button(
-                onClick = { onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0) },
-                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..4,
+                onClick = { onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, estimatedArrival, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0) },
+                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (estimatedArrival.isBlank() || estimatedArrival.length == 16) && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..4,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip") }
@@ -1377,7 +1398,7 @@ private fun DriverScreen(
                 Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(15.dp)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("${trip.origin} → ${trip.destination}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(trip.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 11.sp)
+                        Text(formatTripTime(trip.departureAt, trip.arrivalAt), color = Muted, fontSize = 11.sp)
                         Text("PKR ${trip.farePkr} • ${trip.availableSeats}/${trip.totalSeats} seats available • ${trip.status.uppercase()}", color = Navy2, fontSize = 11.sp)
                         if (trip.status == "published") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { cancelCandidate = trip }, modifier = Modifier.weight(1f)) { Text("Cancel") }
