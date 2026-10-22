@@ -311,6 +311,13 @@ private fun OTSApp(
                         ticketFare = booking.fareTotalPkr
                         ticketReference = booking.id
                         showTicket = true
+                    }, onPay = { booking ->
+                        pendingBookingId = booking.id
+                        pendingPaymentAmount = booking.fareTotalPkr
+                        paymentMethod = booking.paymentMethod.ifBlank { "easypaisa" }
+                        paymentSubmitted = false
+                        paymentMessage = ""
+                        showPayment = true
                     }, onCancel = { booking ->
                         val active = session
                         if (active != null) scope.launch {
@@ -978,6 +985,7 @@ private fun BookingsScreen(
     onBrowse: () -> Unit,
     onLogin: () -> Unit,
     onTicket: (SupabaseApi.Booking) -> Unit,
+    onPay: (SupabaseApi.Booking) -> Unit,
     onCancel: (SupabaseApi.Booking) -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1016,8 +1024,11 @@ private fun BookingsScreen(
                         if (booking.status == "confirmed") {
                             Button(onClick = { onTicket(booking) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open confirmed ticket") }
                             OutlinedButton(onClick = { onCancel(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Cancel, null); Spacer(Modifier.width(8.dp)); Text("Request cancellation") }
+                        } else if (booking.status == "pending_payment" && booking.paymentStatus == "pending") {
+                            Text("Payment reference submitted. Your ticket will appear after OTS verifies the transfer.", color = Color(0xFF9B681F), fontSize = 11.sp)
                         } else if (booking.status == "pending_payment") {
-                            Text("Payment pending review. Your seat is held for 15 minutes; a ticket appears after OTS verifies your payment.", color = Color(0xFF9B681F), fontSize = 11.sp)
+                            Text("Payment has not been submitted yet. The seat hold expires after 15 minutes.", color = Color(0xFF9B681F), fontSize = 11.sp)
+                            OutlinedButton(onClick = { onPay(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Payments, null); Spacer(Modifier.width(8.dp)); Text("Continue payment") }
                         } else if (booking.status == "cancel_requested") Text("Your cancellation request is waiting for OTS review.", color = Muted, fontSize = 11.sp)
                         else if (booking.status == "cancelled") Text("This booking was cancelled and the seat is no longer held.", color = Muted, fontSize = 11.sp)
                     }
