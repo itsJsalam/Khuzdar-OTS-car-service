@@ -282,7 +282,10 @@ private fun OTSApp(
                         }
                     )
                     tab == "Rides" -> RidesScreen(isUrdu = language == "ur", route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
-                    tab == "Seat" -> SeatScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
+                    tab == "Seat" -> SeatScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onMap = {
+                        val destination = java.net.URLEncoder.encode((selectedRide?.city ?: "Karachi"), "UTF-8")
+                        appContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&origin=Khuzdar&destination=$destination&travelmode=driving")))
+                    }, onBook = {
                         val trip = selectedRide
                         val active = session
                         if (trip?.tripId == null) {
@@ -910,7 +913,7 @@ private fun PaymentScreen(
 }
 
 @Composable
-private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onBook: () -> Unit) {
+private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onMap: () -> Unit, onBook: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }
@@ -918,6 +921,11 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                 Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your seat", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 Text(ride.route, color = Muted, fontSize = 12.sp)
             }
+        }
+        OutlinedButton(onClick = onMap, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp)) {
+            Icon(Icons.Default.Map, null)
+            Spacer(Modifier.width(8.dp))
+            Text(if (isUrdu) "نقشے پر راستہ دیکھیں" else "View route in Google Maps")
         }
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(28.dp)) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
