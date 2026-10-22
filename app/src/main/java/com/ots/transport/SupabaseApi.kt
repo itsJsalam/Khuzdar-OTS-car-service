@@ -40,7 +40,8 @@ internal object SupabaseApi {
         val farePkr: Int,
         val availableSeats: Int,
         val totalSeats: Int = 0,
-        val status: String = "published"
+        val status: String = "published",
+        val arrivalAt: String? = null
     )
 
     data class Booking(
@@ -52,7 +53,8 @@ internal object SupabaseApi {
         val fareTotalPkr: Int,
         val status: String,
         val paymentStatus: String = "",
-        val paymentMethod: String = ""
+        val paymentMethod: String = "",
+        val arrivalAt: String? = null
     )
 
     data class ApprovedVehicle(
@@ -338,7 +340,7 @@ internal object SupabaseApi {
             "UTF-8"
         )
         val response = request(
-            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&available_seats=gt.0&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
+            "/rest/v1/trips?status=eq.published&departure_at=gt.$now&available_seats=gt.0&select=id,origin,destination,pickup_point,dropoff_point,departure_at,arrival_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
             "GET",
             token = session?.accessToken
         )
@@ -355,7 +357,8 @@ internal object SupabaseApi {
                 farePkr = row.getInt("fare_pkr"),
                 availableSeats = row.getInt("available_seats"),
                 totalSeats = row.optInt("total_seats"),
-                status = row.optString("status", "published")
+                status = row.optString("status", "published"),
+                arrivalAt = row.optString("arrival_at").takeIf { it.isNotBlank() && it != "null" }
             )
         }
     }
@@ -445,6 +448,7 @@ internal object SupabaseApi {
         pickup: String,
         dropoff: String,
         departureAt: String,
+        arrivalAt: String?,
         farePkr: Int,
         seats: Int
     ): String = withContext(Dispatchers.IO) {
@@ -456,6 +460,7 @@ internal object SupabaseApi {
             .put("pickup_point", pickup.trim())
             .put("dropoff_point", dropoff.trim())
             .put("departure_at", departureAt)
+            .put("arrival_at", arrivalAt?.let { org.json.JSONObject.wrap(it) } ?: JSONObject.NULL)
             .put("fare_pkr", farePkr)
             .put("total_seats", seats)
             .put("available_seats", seats)
@@ -474,7 +479,7 @@ internal object SupabaseApi {
 
     suspend fun getBookings(session: Session): List<Booking> = withContext(Dispatchers.IO) {
         val response = request(
-            "/rest/v1/bookings?select=id,seat_labels,fare_total_pkr,status,trips(origin,destination,departure_at),payment_submissions(status,payment_method)&order=created_at.desc",
+            "/rest/v1/bookings?select=id,seat_labels,fare_total_pkr,status,trips(origin,destination,departure_at,arrival_at),payment_submissions(status,payment_method)&order=created_at.desc",
             "GET",
             token = session.accessToken
         )
@@ -503,7 +508,8 @@ internal object SupabaseApi {
                 fareTotalPkr = row.optInt("fare_total_pkr"),
                 status = row.optString("status", "confirmed"),
                 paymentStatus = payment.optString("status", ""),
-                paymentMethod = payment.optString("payment_method", "")
+                paymentMethod = payment.optString("payment_method", ""),
+                arrivalAt = trip.optString("arrival_at").takeIf { it.isNotBlank() && it != "null" }
             )
         }
     }
@@ -532,7 +538,7 @@ internal object SupabaseApi {
 
     suspend fun getDriverTrips(session: Session): List<Trip> = withContext(Dispatchers.IO) {
         val response = request(
-            "/rest/v1/trips?driver_id=eq.${session.userId}&select=id,origin,destination,pickup_point,dropoff_point,departure_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
+            "/rest/v1/trips?driver_id=eq.${session.userId}&select=id,origin,destination,pickup_point,dropoff_point,departure_at,arrival_at,fare_pkr,available_seats,total_seats,status&order=departure_at.asc",
             "GET",
             token = session.accessToken
         )
@@ -573,6 +579,7 @@ internal object SupabaseApi {
                 .put("pickup_point", pickup.trim())
                 .put("dropoff_point", dropoff.trim())
                 .put("departure_at", departureAt)
+                .put("arrival_at", JSONObject.NULL)
                 .put("fare_pkr", farePkr)
                 .put("total_seats", seats)
                 .put("available_seats", seats),
