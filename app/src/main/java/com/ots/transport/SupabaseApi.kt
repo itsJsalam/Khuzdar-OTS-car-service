@@ -522,6 +522,17 @@ internal object SupabaseApi {
         }
     }
 
+    suspend fun cancelPendingPaymentBooking(session: Session, bookingId: String) = withContext(Dispatchers.IO) {
+        request(
+            "/rest/v1/bookings?id=eq.${URLEncoder.encode(bookingId, "UTF-8")}&status=eq.pending_payment",
+            "PATCH",
+            token = session.accessToken,
+            body = JSONObject().put("status", "cancelled"),
+            prefer = "return=minimal"
+        )
+        Unit
+    }
+
     suspend fun requestBookingCancellation(session: Session, bookingId: String) = withContext(Dispatchers.IO) {
         request(
             "/rest/v1/bookings?id=eq.$bookingId",
