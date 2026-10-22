@@ -124,6 +124,9 @@ private fun OTSApp(
     var authName by remember { mutableStateOf("") }
     var authPhone by remember { mutableStateOf("") }
     var authIsSignup by remember { mutableStateOf(false) }
+    var phoneOtpMode by remember { mutableStateOf(false) }
+    var phoneOtpSent by remember { mutableStateOf(false) }
+    var phoneOtpCode by remember { mutableStateOf("") }
     var authBusy by remember { mutableStateOf(false) }
     var authMessage by remember { mutableStateOf("") }
     var session by remember { mutableStateOf<SupabaseApi.Session?>(initialSession) }
@@ -454,22 +457,38 @@ private fun OTSApp(
                 title = { Text(if (language == "ur") { if (authIsSignup) "OTS اکاؤنٹ بنائیں" else "OTS میں سائن اِن کریں" } else { if (authIsSignup) "Create your OTS account" else "Sign in to OTS" }) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text(if (language == "ur") {
-                            if (role == "Driver") "ڈرائیور اکاؤنٹ • سفر شائع کرنے سے پہلے منظوری ضروری ہے۔" else "مسافر اکاؤنٹ • ای میل اور پاس ورڈ استعمال کریں۔"
+                        Text(if (phoneOtpMode) {
+                            "Phone verification uses Supabase SMS. An SMS provider must be enabled in the Supabase Auth settings before codes can be delivered."
+                        } else if (role == "Driver") {
+                            "Driver access • administrator approval is required before trip publishing."
                         } else {
-                            if (role == "Driver") "Driver access • approval is required before trip publishing." else "Passenger access • use an email and password. No paid SMS service is needed."
+                            "Passenger access • sign in with email and password, or choose phone verification."
                         })
-                        if (authIsSignup) {
+                        if (authIsSignup || phoneOtpMode) {
                             OutlinedTextField(value = authName, onValueChange = { authName = it }, label = { Text("Full name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = authPhone, onValueChange = { authPhone = it }, label = { Text("Phone number (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         }
-                        OutlinedTextField(value = authEmail, onValueChange = { authEmail = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = authPassword, onValueChange = { authPassword = it }, label = { Text("Password (at least 6 characters)") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+                        if (authIsSignup || phoneOtpMode) {
+                            OutlinedTextField(value = authPhone, onValueChange = { authPhone = it }, label = { Text(if (phoneOtpMode) "Pakistani mobile number" else "Phone number (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        }
+                        if (!phoneOtpMode) {
+                            OutlinedTextField(value = authEmail, onValueChange = { authEmail = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = authPassword, onValueChange = { authPassword = it }, label = { Text("Password (at least 6 characters)") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+                        } else if (phoneOtpSent) {
+                            OutlinedTextField(value = phoneOtpCode, onValueChange = { phoneOtpCode = it.filter(Char::isDigit).take(10) }, label = { Text("SMS verification code") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        }
                         if (authMessage.isNotBlank()) Text(authMessage, color = if (authMessage.startsWith("Account created")) Color(0xFF14785E) else Color(0xFF9A4D20), fontSize = 12.sp)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                             TextButton(enabled = !authBusy, onClick = { authIsSignup = !authIsSignup; authMessage = "" }) {
                                 Text(if (language == "ur") { if (authIsSignup) "میرا اکاؤنٹ موجود ہے؟ سائن اِن" else "نیا اکاؤنٹ بنائیں" } else { if (authIsSignup) "Already have an account? Sign in" else "New here? Create an account" })
                             }
+                        }
+                        TextButton(enabled = !authBusy, onClick = {
+                            phoneOtpMode = !phoneOtpMode
+                            phoneOtpSent = false
+                            phoneOtpCode = ""
+                            authMessage = ""
+                        }) {
+                            Text(if (phoneOtpMode) "Use email and password instead" else "Use phone verification (SMS)")
                         }
                         if (authBusy) Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)); Text("Connecting securely…", fontSize = 12.sp) }
                     }
@@ -477,7 +496,45 @@ private fun OTSApp(
                 confirmButton = {
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = !authBusy, onClick = {
-                        if (authEmail.isBlank() || authPassword.length < 6 || (authIsSignup && authName.isBlank())) {
+                        if (phoneOtpMode) {
+                            if (authPhone.isBlank()) {
+                                authMessage = "Enter your Pakistani mobile number."
+                            } else if (!phoneOtpSent) {
+                                scope.launch {
+                                    authBusy = true
+                                    authMessage = ""
+                                    try {
+                                        SupabaseApi.sendPhoneOtp(authPhone)
+                                        phoneOtpSent = true
+                                        authMessage = "SMS code requested. Check your messages; delivery requires an active Supabase SMS provider."
+                                    } catch (e: Exception) {
+                                        authMessage = e.message ?: "SMS code could not be sent. Check the Supabase SMS provider configuration."
+                                    } finally { authBusy = false }
+                                }
+                            } else if (phoneOtpCode.isBlank()) {
+                                authMessage = "Enter the SMS verification code."
+                            } else {
+                                scope.launch {
+                                    authBusy = true
+                                    authMessage = ""
+                                    try {
+                                        val signedIn = SupabaseApi.verifyPhoneOtp(authPhone, phoneOtpCode)
+                                        val profile = SupabaseApi.getProfile(signedIn)
+                                        if (profile == null) {
+                                            SupabaseApi.saveProfile(signedIn, authName.ifBlank { authPhone }, authPhone, role)
+                                        } else {
+                                            role = if (profile.optString("account_type") == "driver") "Driver" else "Passenger"
+                                        }
+                                        SessionStore.save(appContext, signedIn)
+                                        session = signedIn
+                                        showOtp = false
+                                        notice = "Your phone number is verified and you are signed in to OTS Transport."
+                                    } catch (e: Exception) {
+                                        authMessage = e.message ?: "Phone verification failed. Check the code and try again."
+                                    } finally { authBusy = false }
+                                }
+                            }
+                        } else if (authEmail.isBlank() || authPassword.length < 6 || (authIsSignup && authName.isBlank())) {
                             authMessage = if (authIsSignup) "Enter your name, a valid email, and a password of at least 6 characters." else "Enter your email and a password of at least 6 characters."
                         } else {
                             scope.launch {
@@ -519,7 +576,7 @@ private fun OTSApp(
                                 }
                             }
                         }
-                    }) { Text(if (language == "ur") { if (authIsSignup) "اکاؤنٹ بنائیں" else "سائن اِن" } else { if (authIsSignup) "Create account" else "Sign in" }) }
+                    }) { Text(if (phoneOtpMode) { if (phoneOtpSent) "Verify SMS code" else "Send SMS code" } else if (language == "ur") { if (authIsSignup) "اکاؤنٹ بنائیں" else "سائن اِن" } else { if (authIsSignup) "Create account" else "Sign in" }) }
                     OutlinedButton(
                         enabled = !authBusy,
                         onClick = {
