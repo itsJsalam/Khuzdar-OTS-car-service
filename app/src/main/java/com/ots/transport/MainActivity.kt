@@ -741,19 +741,34 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("FRONT", color = Color(0xFFB8C9D7), fontSize = 9.sp); Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFFB8C9D7), modifier = Modifier.size(18.dp)) }
                         Spacer(Modifier.height(14.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (isUrdu) "ڈرائیور" else "DRIVER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            Surface(color = Color(0xFF35546A), shape = RoundedCornerShape(8.dp)) { Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "سامنے" else "FRONT", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) } }
+                        Text(if (isUrdu) "ڈرائیور کی نشست" else "DRIVER SEAT — NOT BOOKABLE", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Surface(color = Color(0xFF35546A), shape = RoundedCornerShape(10.dp)) {
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(if (isUrdu) "ڈرائیور" else "DRIVER", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
-                        val seatNumbers = (1..ride.totalSeats.coerceIn(1, 20)).toList()
-                        seatNumbers.chunked(2).forEachIndexed { rowIndex, pair ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                pair.forEach { number -> val label = "Seat " + number; Box(Modifier.weight(1f)) { SeatButton(label, seat == label, onSeat, true) } }
-                                if (pair.size == 1) Spacer(Modifier.weight(1f))
-                            }
-                            if (rowIndex < seatNumbers.chunked(2).lastIndex) Spacer(Modifier.height(8.dp))
+                        Text(if (isUrdu) "اگلی نشست" else "FRONT PASSENGER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Box(Modifier.fillMaxWidth()) {
+                            val frontAvailable = ride.totalSeats >= 1
+                            SeatButton("Seat 1", seat == "Seat 1", onSeat, frontAvailable)
                         }
+                        Spacer(Modifier.height(12.dp))
+                        Text(if (isUrdu) "پچھلی نشستیں — 3" else "REAR ROW — 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            (2..4).forEach { number ->
+                                Box(Modifier.weight(1f)) {
+                                    val label = "Seat " + number
+                                    SeatButton(label, seat == label, onSeat, number <= ride.totalSeats)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(if (isUrdu) "کل 5 نشستیں: 1 ڈرائیور، 1 اگلی مسافر نشست، اور 3 پچھلی مسافر نشستیں۔ صرف مسافروں کی نشستیں بک کی جا سکتی ہیں۔" else "Five seats total: 1 driver, 1 front passenger and 3 rear passengers. Only the four passenger seats can be booked.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
@@ -938,7 +953,7 @@ private fun DriverScreen(
     var year by remember { mutableStateOf("2020") }
     var plate by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
-    var seats by remember { mutableStateOf("3") }
+    var seats by remember { mutableStateOf("4") }
     var luggage by remember { mutableStateOf("Standard") }
     var destination by remember { mutableStateOf("Karachi") }
     var pickupPoint by remember { mutableStateOf("Khuzdar") }
@@ -946,7 +961,7 @@ private fun DriverScreen(
     var departureDate by remember { mutableStateOf("") }
     var departureTime by remember { mutableStateOf("06:30") }
     var tripFare by remember { mutableStateOf("") }
-    var tripSeats by remember { mutableStateOf("3") }
+    var tripSeats by remember { mutableStateOf("4") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
     var editVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
     var replacementVehiclePhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -1060,11 +1075,11 @@ private fun DriverScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text(if (isUrdu) "فی نشست کرایہ (PKR)" else "Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Button(
                 onClick = { onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0) },
-                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..20,
+                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..4,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip") }
