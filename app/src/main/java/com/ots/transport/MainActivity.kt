@@ -964,7 +964,7 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                         Spacer(Modifier.weight(1f))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(if (isUrdu) "4 passenger seats" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     // Side wheels and mirrors make the seating plan read as a complete vehicle, not loose seat tiles.
