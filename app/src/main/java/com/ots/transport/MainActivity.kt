@@ -706,19 +706,26 @@ private fun RidesScreen(
 
 @Composable
 private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(45.dp).clip(RoundedCornerShape(14.dp)).background(Navy), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(27.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) { Text(ride.route, color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp); Text(ride.time, color = Muted, fontSize = 11.sp) }
-            Surface(color = Color(0xFFFFF0D7), shape = RoundedCornerShape(7.dp)) { Text(ride.tag, Modifier.padding(horizontal = 7.dp, vertical = 5.dp), color = Color(0xFF8B5A18), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold) }
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(RoundedCornerShape(15.dp)).background(Navy), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = Gold, modifier = Modifier.size(28.dp)) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(ride.route, color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(ride.time, color = Muted, fontSize = 11.sp) }
+                Surface(color = Color(0xFFE4F7F0), shape = RoundedCornerShape(8.dp)) { Text(ride.tag, Modifier.padding(horizontal = 8.dp, vertical = 6.dp), color = Color(0xFF11765E), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold) }
+            }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Paper).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.EventSeat, null, tint = Navy2, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(if (isUrdu) "دستیاب نشستیں" else "Seats available", color = Muted, fontSize = 10.sp); Text("${ride.seats}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(if (isUrdu) "فی نشست" else "PER SEAT", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text("PKR ${ride.price}", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Black) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.VerifiedUser, null, tint = Color(0xFF16876E), modifier = Modifier.size(17.dp)); Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(ride.driver, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text(ride.car, color = Muted, fontSize = 10.sp) }
+                Text("★ ${ride.rating}", color = Color(0xFF8B5A18), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "نشستیں منتخب کریں" else "View trip & choose seat"); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp)) }
         }
-        HorizontalDivider(color = Color(0xFFE9EEF3))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(ride.car, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text((if (isUrdu) "ڈرائیور: " else "Driver: ") + "${ride.driver}  •  ★ ${ride.rating}", color = Muted, fontSize = 10.sp) }
-            Column(horizontalAlignment = Alignment.End) { Text("PKR ${ride.price}", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "${ride.seats} نشستیں باقی" else "${ride.seats} seats left", color = Color(0xFF16876E), fontSize = 10.sp) }
-        }
-        Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "نشستیں منتخب کریں" else "Choose seats"); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp)) }
     }
 }
 
@@ -734,14 +741,26 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("FRONT", color = Color(0xFFB8C9D7), fontSize = 9.sp); Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFFB8C9D7), modifier = Modifier.size(18.dp)) }
                         Spacer(Modifier.height(14.dp))
-                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            (1..ride.totalSeats.coerceIn(1, 20)).forEach { number ->
-                                val label = "Seat " + number
-                                SeatButton(label, seat == label, onSeat, true)
-                            }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isUrdu) "ڈرائیور" else "DRIVER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Surface(color = Color(0xFF35546A), shape = RoundedCornerShape(8.dp)) { Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "سامنے" else "FRONT", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) } }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text(if (isUrdu) "نشستوں کی تعداد منظور شدہ گاڑی کے مطابق ہے۔ ایک نشست دو بار بک نہیں ہو سکتی۔" else "Seat count matches the approved vehicle capacity. The database prevents double-booking a seat.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                        val seatNumbers = (1..ride.totalSeats.coerceIn(1, 20)).toList()
+                        seatNumbers.chunked(2).forEachIndexed { rowIndex, pair ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                pair.forEach { number -> val label = "Seat " + number; Box(Modifier.weight(1f)) { SeatButton(label, seat == label, onSeat, true) } }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                            if (rowIndex < seatNumbers.chunked(2).lastIndex) Spacer(Modifier.height(8.dp))
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
+                            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF2B6C68))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب کرنے کے لیے دستیاب" else "Tap to select", color = Color.White, fontSize = 9.sp) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(if (isUrdu) "نشستیں منظور شدہ گاڑی کی گنجائش کے مطابق ہیں۔ بکنگ کے وقت دستیابی سرور سے تصدیق ہوتی ہے۔" else "Seat layout reflects the approved vehicle capacity. Seat availability is validated when you book.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
                     }
                 }
             }
