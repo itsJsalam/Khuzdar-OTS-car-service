@@ -357,10 +357,15 @@ private fun OTSApp(
                         val active = session
                         if (active != null) scope.launch {
                             try {
-                                SupabaseApi.requestBookingCancellation(active, booking.id)
+                                if (booking.status == "pending_payment") {
+                                    SupabaseApi.cancelPendingPaymentBooking(active, booking.id)
+                                    notice = "Unpaid seat hold cancelled."
+                                } else {
+                                    SupabaseApi.requestBookingCancellation(active, booking.id)
+                                    notice = "Cancellation request sent. A confirmed trip is cancelled only after OTS reviews it."
+                                }
                                 liveBookings = SupabaseApi.getBookings(active)
-                                notice = "Cancellation request sent. The trip is not cancelled until OTS reviews the request."
-                            } catch (e: Exception) { notice = e.message ?: "Could not request cancellation." }
+                            } catch (e: Exception) { notice = e.message ?: "Could not cancel this booking." }
                         }
                     })
                     tab == "Profile" -> ProfileScreen(isUrdu = language == "ur", role = role, onRole = { role = it }, onLogin = { authMessage = ""; showOtp = true }, signedIn = session != null, email = session?.email.orEmpty(), onSignOut = { SessionStore.clear(appContext); session = null; driverStatus = "not_submitted"; notice = "You have signed out." })
@@ -1130,6 +1135,7 @@ private fun BookingsScreen(
                         } else if (booking.status == "pending_payment") {
                             Text("Payment has not been submitted yet. The seat hold expires after 15 minutes.", color = Color(0xFF9B681F), fontSize = 11.sp)
                             OutlinedButton(onClick = { onPay(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Payments, null); Spacer(Modifier.width(8.dp)); Text("Continue payment") }
+                            TextButton(onClick = { onCancel(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Cancel, null); Spacer(Modifier.width(8.dp)); Text("Cancel unpaid seat hold") }
                         } else if (booking.status == "cancel_requested") Text("Your cancellation request is waiting for OTS review.", color = Muted, fontSize = 11.sp)
                         else if (booking.status == "cancelled") Text("This booking was cancelled and the seat is no longer held.", color = Muted, fontSize = 11.sp)
                     }
