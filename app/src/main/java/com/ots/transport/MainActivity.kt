@@ -689,7 +689,7 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
         Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Ink, Navy2, Color(0xFF23536A)))).padding(start = 22.dp, end = 22.dp, top = 24.dp, bottom = 28.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Gold, Color(0xFFFFE7B6)))), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Ink, modifier = Modifier.size(27.dp)) }
+                    OtsLogo(44.dp)
                     Spacer(Modifier.width(11.dp))
                     Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text(if (isUrdu) "خضدار • شہروں کے درمیان سفر" else "Khuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
                     Spacer(Modifier.weight(1f))
@@ -964,9 +964,16 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                         Spacer(Modifier.weight(1f))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (isUrdu) "4 passenger seats" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
+                    // Side wheels and mirrors make the seating plan read as a complete vehicle, not loose seat tiles.
+                    Box(Modifier.align(Alignment.CenterStart).offset(x = (-7).dp, y = (-104).dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
+                    Box(Modifier.align(Alignment.CenterStart).offset(x = (-7).dp, y = 104.dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
+                    Box(Modifier.align(Alignment.CenterEnd).offset(x = 7.dp, y = (-104).dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
+                    Box(Modifier.align(Alignment.CenterEnd).offset(x = 7.dp, y = 104.dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
+                    Box(Modifier.align(Alignment.TopStart).offset(x = 4.dp, y = 52.dp).size(16.dp, 10.dp).background(Color(0xFF91A8B7), RoundedCornerShape(6.dp)))
+                    Box(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 52.dp).size(16.dp, 10.dp).background(Color(0xFF91A8B7), RoundedCornerShape(6.dp)))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
