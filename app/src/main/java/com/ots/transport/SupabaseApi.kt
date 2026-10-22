@@ -555,7 +555,8 @@ internal object SupabaseApi {
                 farePkr = row.getInt("fare_pkr"),
                 availableSeats = row.getInt("available_seats"),
                 totalSeats = row.optInt("total_seats"),
-                status = row.optString("status", "published")
+                status = row.optString("status", "published"),
+                arrivalAt = row.optString("arrival_at").takeIf { it.isNotBlank() && it != "null" }
             )
         }
     }
