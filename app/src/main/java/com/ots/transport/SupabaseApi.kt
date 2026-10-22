@@ -147,6 +147,44 @@ internal object SupabaseApi {
         }
     }
 
+    private fun normalizePakistanPhone(phone: String): String {
+        val digits = phone.filter { it.isDigit() }
+        return when {
+            phone.trim().startsWith("+") && digits.length in 10..15 -> "+$digits"
+            digits.startsWith("92") && digits.length == 12 -> "+$digits"
+            digits.startsWith("0") && digits.length == 11 -> "+92" + digits.drop(1)
+            digits.length == 10 && digits.startsWith("3") -> "+92$digits"
+            else -> throw IllegalArgumentException("Enter a valid Pakistani mobile number, such as 03XXXXXXXXX.")
+        }
+    }
+
+    suspend fun sendPhoneOtp(phone: String) = withContext(Dispatchers.IO) {
+        val normalized = normalizePakistanPhone(phone)
+        request(
+            "/auth/v1/otp",
+            "POST",
+            body = JSONObject().put("phone", normalized).put("create_user", true)
+        )
+        Unit
+    }
+
+    suspend fun verifyPhoneOtp(phone: String, code: String): Session = withContext(Dispatchers.IO) {
+        require(code.trim().length in 4..10) { "Enter the verification code from your SMS." }
+        val normalized = normalizePakistanPhone(phone)
+        val json = JSONObject(request(
+            "/auth/v1/verify",
+            "POST",
+            body = JSONObject().put("phone", normalized).put("token", code.trim()).put("type", "sms")
+        ))
+        val user = json.optJSONObject("user") ?: throw IllegalStateException("Phone verification did not return a user.")
+        Session(
+            userId = user.getString("id"),
+            email = user.optString("email", ""),
+            accessToken = json.getString("access_token"),
+            refreshToken = json.optString("refresh_token")
+        )
+    }
+
     suspend fun signIn(email: String, password: String): Session = withContext(Dispatchers.IO) {
         val response = request(
             "/auth/v1/token?grant_type=password",
