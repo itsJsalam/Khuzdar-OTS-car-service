@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.graphics.Bitmap
 import android.content.Intent
 import android.net.Uri
+import android.location.LocationManager
+import android.Manifest
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,6 +96,24 @@ private fun OTSApp(
     onOAuthCallbackHandled: () -> Unit
 ) {
     val appContext = LocalContext.current
+    val locationShareLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val location = try {
+            if (permissions.values.any { it }) {
+                val manager = appContext.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+                manager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            } else null
+        } catch (_: SecurityException) { null } catch (_: Exception) { null }
+        val rideToShare = selectedRide ?: sampleRides[0]
+        val mapLink = if (location != null) {
+            "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+        } else {
+            "https://www.google.com/maps/dir/?api=1&origin=Khuzdar&destination=" + java.net.URLEncoder.encode(rideToShare.city, "UTF-8")
+        }
+        val text = "OTS Transport trip: ${rideToShare.route}\nBooking reference: ${ticketReference.ifBlank { "not booked yet" }}\nMy location / route: $mapLink"
+        val shareIntent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        appContext.startActivity(Intent.createChooser(shareIntent, "Share OTS trip location"))
+    }
     var role by remember { mutableStateOf("Passenger") }
     var tab by remember { mutableStateOf("Home") }
     var language by remember { mutableStateOf(appContext.getSharedPreferences("ots_settings", android.content.Context.MODE_PRIVATE).getString("language", "").orEmpty()) }
@@ -248,7 +268,16 @@ private fun OTSApp(
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
-                    showTicket -> TicketScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
+                    showTicket -> TicketScreen(
+                        isUrdu = language == "ur",
+                        ride = selectedRide ?: sampleRides[0],
+                        seat = selectedSeat,
+                        fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat),
+                        reference = ticketReference,
+                        onBack = { showTicket = false; tab = "Bookings" },
+                        onShareLocation = { locationShareLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                        onSos = { appContext.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:1122"))) }
+                    )
                     showPayment -> PaymentScreen(
                         isUrdu = language == "ur",
                         amount = pendingPaymentAmount,
@@ -1111,7 +1140,7 @@ private fun BookingsScreen(
 }
 
 @Composable
-private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, reference: String, onBack: () -> Unit) {
+private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, reference: String, onBack: () -> Unit, onShareLocation: () -> Unit, onSos: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }; Text(if (isUrdu) "ڈیجیٹل سفری ٹکٹ" else "Digital travel ticket", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold) }
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp)) {
@@ -1133,6 +1162,15 @@ private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, r
                 Text("Booking reference: " + reference, color = Muted, fontSize = 11.sp)
             }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onShareLocation, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                Icon(Icons.Default.Share, null); Spacer(Modifier.width(5.dp)); Text("Share location", fontSize = 11.sp)
+            }
+            Button(onClick = onSos, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB42318))) {
+                Icon(Icons.Default.Call, null); Spacer(Modifier.width(5.dp)); Text("SOS • 1122", fontSize = 11.sp)
+            }
+        }
+        Text("Location sharing uses your last known location if permission is granted. SOS opens the phone dialer; it does not call automatically.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
         Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)) { Text("Done", fontWeight = FontWeight.Bold) }
     }
 }
