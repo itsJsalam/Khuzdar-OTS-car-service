@@ -3,7 +3,7 @@
     <application
         android:allowBackup="false"
         android:label="OTS Transport"
-        android:icon="@drawable/ots_logo"
+        android:icon="@drawable/ots_brand"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true">
         <activity
