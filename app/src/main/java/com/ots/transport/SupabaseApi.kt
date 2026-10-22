@@ -292,6 +292,20 @@ internal object SupabaseApi {
     }
 
     suspend fun getApprovedTrips(session: Session? = null): List<Trip> = withContext(Dispatchers.IO) {
+        // Expired manual-payment holds must release their seats before availability is shown.
+        if (session != null) {
+            try {
+                request(
+                    "/rest/v1/rpc/cleanup_expired_ots_payment_holds",
+                    "POST",
+                    token = session.accessToken,
+                    body = JSONObject(),
+                    prefer = "return=representation"
+                )
+            } catch (_: Exception) {
+                // Trip browsing still works if cleanup is temporarily unavailable.
+            }
+        }
         val now = URLEncoder.encode(
             SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
                 .apply { timeZone = TimeZone.getTimeZone("Asia/Karachi") }
