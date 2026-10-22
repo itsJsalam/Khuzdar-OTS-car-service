@@ -85,18 +85,41 @@ internal object SupabaseApi {
     }
 
     suspend fun completeGoogleOAuth(context: Context, callback: Uri): Session = withContext(Dispatchers.IO) {
-        val oauthError = callback.getQueryParameter("error_description") ?: callback.getQueryParameter("error")
+        // Supabase may return OAuth PKCE codes in the query, or email-confirmation
+        // tokens in the URL fragment after the hosted confirmation page opens the app.
+        val fragmentParams = callback.encodedFragment?.let {
+            Uri.parse("https://ots-callback.invalid/?$it")
+        }
+        val oauthError = callback.getQueryParameter("error_description")
+            ?: callback.getQueryParameter("error")
+            ?: fragmentParams?.getQueryParameter("error_description")
+            ?: fragmentParams?.getQueryParameter("error")
         if (!oauthError.isNullOrBlank()) throw IllegalStateException(oauthError)
+
+        val accessToken = callback.getQueryParameter("access_token")
+            ?: fragmentParams?.getQueryParameter("access_token")
+        if (!accessToken.isNullOrBlank()) {
+            val refreshToken = callback.getQueryParameter("refresh_token")
+                ?: fragmentParams?.getQueryParameter("refresh_token").orEmpty()
+            val user = JSONObject(request("/auth/v1/user", "GET", token = accessToken))
+            return@withContext Session(
+                userId = user.getString("id"),
+                email = user.optString("email", ""),
+                accessToken = accessToken,
+                refreshToken = refreshToken
+            )
+        }
+
         val code = callback.getQueryParameter("code").orEmpty()
-        if (code.isBlank()) throw IllegalStateException("Google sign-in did not return an authorization code. Check the Supabase OAuth redirect settings.")
+        if (code.isBlank()) throw IllegalStateException("The verification or Google sign-in link is missing its authorization data. Request a fresh link and try again.")
         val verifier = context.getSharedPreferences("ots_settings", Context.MODE_PRIVATE).getString("oauth_pkce_verifier", null)
-            ?: throw IllegalStateException("The Google sign-in session expired. Please try again.")
+            ?: throw IllegalStateException("The sign-in session expired. Please try again.")
         val json = JSONObject(request(
             "/auth/v1/token?grant_type=pkce",
             "POST",
             body = JSONObject().put("auth_code", code).put("code_verifier", verifier)
         ))
-        val user = json.optJSONObject("user") ?: throw IllegalStateException("Google sign-in did not return a user.")
+        val user = json.optJSONObject("user") ?: throw IllegalStateException("Sign-in did not return a user.")
         context.getSharedPreferences("ots_settings", Context.MODE_PRIVATE).edit().remove("oauth_pkce_verifier").apply()
         Session(user.getString("id"), user.optString("email", ""), json.getString("access_token"), json.optString("refresh_token"))
     }
@@ -105,7 +128,10 @@ internal object SupabaseApi {
         val response = request(
             "/auth/v1/signup",
             "POST",
-            body = JSONObject().put("email", email.trim()).put("password", password)
+            body = JSONObject()
+                .put("email", email.trim())
+                .put("password", password)
+                .put("options", JSONObject().put("emailRedirectTo", "https://ots-auth-portal.vercel.app/"))
         )
         val json = JSONObject(response)
         val user = json.optJSONObject("user") ?: json
