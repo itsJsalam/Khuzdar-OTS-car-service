@@ -2,6 +2,7 @@ package com.ots.transport
 
 import android.os.Bundle
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.content.Intent
 import android.net.Uri
 import android.location.LocationManager
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -969,6 +971,35 @@ private fun PaymentScreen(
 }
 
 @Composable
+private fun SeatCarPhoto(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val bitmap = remember {
+        BitmapFactory.decodeResource(context.resources, R.drawable.ots_seat_car)?.let { source ->
+            // Crop the supplied reference down to the realistic top-down vehicle cabin.
+            val left = 78.coerceIn(0, source.width - 1)
+            val top = 42.coerceIn(0, source.height - 1)
+            val width = 370.coerceAtMost(source.width - left)
+            val height = 175.coerceAtMost(source.height - top)
+            Bitmap.createBitmap(source, left, top, width, height).also { cropped ->
+                if (cropped !== source) source.recycle()
+            }
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = "Realistic top-down car cabin with front and rear passenger seats",
+            contentScale = ContentScale.FillBounds,
+            modifier = modifier.clip(RoundedCornerShape(18.dp))
+        )
+    } else {
+        Box(modifier.background(Color(0xFF24445A), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(56.dp))
+        }
+    }
+}
+
+@Composable
 private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onMap: () -> Unit, onBook: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -987,49 +1018,20 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (isUrdu) "گاڑی کا 3D سیٹ پلان" else "3D VEHICLE SEATING PLAN", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
                 Text(if (isUrdu) "منتخب کرنے کے لیے نشست پر ٹیپ کریں" else "Tap an available passenger seat", color = Color(0xFFB8C9D7), fontSize = 10.sp)
-                // Layered metallic body, windshield and cabin create a raised, 3D top-down car view.
-                Box(
-                    Modifier.width(300.dp).height(405.dp)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF9EABB7), Color(0xFFE1E7EC), Color(0xFF748493))), RoundedCornerShape(58.dp))
-                        .padding(8.dp)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF1D354A), Color(0xFF29485D), Color(0xFF12283A))), RoundedCornerShape(52.dp))
-                        .padding(horizontal = 12.dp, vertical = 13.dp)
-                ) {
-                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Hood and windshield at the front of the car.
-                        Box(Modifier.fillMaxWidth().height(44.dp).background(Brush.verticalGradient(listOf(Color(0xFF526D80), Color(0xFF142B3E))), RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp, bottomStart = 12.dp, bottomEnd = 12.dp)), contentAlignment = Alignment.Center) {
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("FRONT", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-                                Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(19.dp))
-                            }
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            DriverSeatVisual(Modifier.weight(1f), isUrdu)
-                            SeatButton("Seat 1", seat == "Seat 1", onSeat, ride.totalSeats >= 1, Modifier.weight(1f))
-                        }
-                        Text(if (isUrdu) "اگلی نشستیں" else "FRONT ROW", color = Color(0xFFB8C9D7), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                        Spacer(Modifier.height(2.dp))
-                        Box(Modifier.fillMaxWidth().height(10.dp).background(Color(0xFF101F2C), RoundedCornerShape(50.dp)))
-                        Text(if (isUrdu) "پچھلی قطار — 3 نشستیں" else "REAR ROW • 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            (2..4).forEach { number ->
-                                val label = "Seat $number"
-                                SeatButton(label, seat == label, onSeat, number <= ride.totalSeats, Modifier.weight(1f))
-                            }
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                        }
+                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی" else "DRIVER SEAT • NOT BOOKABLE", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                SeatCarPhoto(Modifier.fillMaxWidth().height(185.dp))
+                Text(if (isUrdu) "سامنے مسافر کی نشست" else "FRONT PASSENGER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                SeatButton("Seat 1", seat == "Seat 1", onSeat, ride.totalSeats >= 1, Modifier.fillMaxWidth())
+                Text(if (isUrdu) "پچھلی قطار — 3 نشستیں" else "REAR ROW • 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (2..4).forEach { number ->
+                        val label = "Seat $number"
+                        SeatButton(label, seat == label, onSeat, number <= ride.totalSeats, Modifier.weight(1f))
                     }
-                    // Side wheels and mirrors make the seating plan read as a complete vehicle, not loose seat tiles.
-                    Box(Modifier.align(Alignment.CenterStart).offset(x = (-7).dp, y = (-104).dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
-                    Box(Modifier.align(Alignment.CenterStart).offset(x = (-7).dp, y = 104.dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
-                    Box(Modifier.align(Alignment.CenterEnd).offset(x = 7.dp, y = (-104).dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
-                    Box(Modifier.align(Alignment.CenterEnd).offset(x = 7.dp, y = 104.dp).size(13.dp, 46.dp).background(Color(0xFF0B1118), RoundedCornerShape(6.dp)))
-                    Box(Modifier.align(Alignment.TopStart).offset(x = 4.dp, y = 52.dp).size(16.dp, 10.dp).background(Color(0xFF91A8B7), RoundedCornerShape(6.dp)))
-                    Box(Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 52.dp).size(16.dp, 10.dp).background(Color(0xFF91A8B7), RoundedCornerShape(6.dp)))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
