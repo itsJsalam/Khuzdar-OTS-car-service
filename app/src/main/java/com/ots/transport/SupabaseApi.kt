@@ -128,12 +128,11 @@ internal object SupabaseApi {
 
     suspend fun signUp(email: String, password: String): Pair<Session?, String> = withContext(Dispatchers.IO) {
         val response = request(
-            "/auth/v1/signup",
+            "/auth/v1/signup?redirect_to=" + URLEncoder.encode("https://ots-auth-portal.vercel.app/", "UTF-8"),
             "POST",
             body = JSONObject()
                 .put("email", email.trim())
                 .put("password", password)
-                .put("options", JSONObject().put("emailRedirectTo", "https://ots-auth-portal.vercel.app/"))
         )
         val json = JSONObject(response)
         val user = json.optJSONObject("user") ?: json
