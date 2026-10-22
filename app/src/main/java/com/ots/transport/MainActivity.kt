@@ -74,7 +74,7 @@ private data class Ride(val city: String, val route: String, val time: String, v
 @Composable
 private fun OtsLogo(size: androidx.compose.ui.unit.Dp) {
     Image(
-        painter = painterResource(id = R.drawable.ots_logo),
+        painter = painterResource(id = R.drawable.ots_brand),
         contentDescription = "OTS Transport logo",
         modifier = Modifier.size(size).clip(RoundedCornerShape(13.dp))
     )
