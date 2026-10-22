@@ -10,7 +10,7 @@
 - Free Google Maps directions opened externally from the seat-selection screen.
 - User-initiated sharing of the last known phone location (if permission is granted) and an SOS button that opens the dialer with Rescue 1122; it does not place a call automatically.
 - Supabase phone OTP send/verify client flow, ready for SMS provider configuration.
-- Hosted account-verification landing page: https://ots-auth-portal.vercel.app/
+- Hosted account-verification landing page: https://ots-auth-portal.vercel.app/ (source: `auth-website/index.html`).
 - Generated booking-reference QR codes. The QR is an identifier only; it is not independent proof of boarding.
 
 ## Required Supabase Auth configuration
