@@ -1025,7 +1025,7 @@ private fun DriverScreen(
             }
             OutlinedTextField(value = plate, onValueChange = { plate = it.uppercase() }, label = { Text(if (isUrdu) "رجسٹریشن نمبر" else "Registration number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text(if (isUrdu) "مسافروں کی نشستیں" else "Passenger seats") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text(if (isUrdu) "مسافروں کی نشستیں" else "Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text(if (isUrdu) "سامان کی گنجائش" else "Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             OutlinedButton(onClick = { driverPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
@@ -1038,8 +1038,8 @@ private fun DriverScreen(
                 Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) { if (isUrdu) "گاڑی کی تصاویر منتخب کریں (زیادہ سے زیادہ ۵)" else "Choose car photos (up to 5)" } else if (isUrdu) "${vehiclePhotos.size} تصاویر منتخب ہوئیں" else "${vehiclePhotos.size} car photos selected")
             }
             Button(
-                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 3, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
-                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
+                onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 4, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..4,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (isUrdu) { if (status == "submitting") "جمع ہو رہا ہے…" else "منظوری کے لیے جمع کریں" } else { if (status == "submitting") "Submitting…" else "Submit for approval" }) }
