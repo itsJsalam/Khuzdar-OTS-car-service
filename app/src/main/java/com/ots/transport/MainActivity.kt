@@ -1111,13 +1111,13 @@ private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, r
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OtsLogo(42.dp)
-                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DIGITAL BOARDING PASS", color = Muted, fontSize = 9.sp) }
+                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DIGITAL BOOKING TICKET", color = Muted, fontSize = 9.sp) }
                     Spacer(Modifier.weight(1f)); Icon(Icons.Default.Verified, null, tint = Color(0xFF159C7B))
                 }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
                 Text("BOOKING REF  " + reference.take(12).uppercase(), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 BookingQrCode(reference = reference)
-                Text("Scan to identify this booking", color = Muted, fontSize = 10.sp)
+                Text("Booking reference QR • OTS staff must verify your ticket", color = Muted, fontSize = 10.sp)
                 Text(ride.route, color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 Text(ride.time, color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail("SEAT", seat); TicketDetail("DRIVER", ride.driver); TicketDetail("FARE", "PKR $fare") }
