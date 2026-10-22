@@ -568,6 +568,7 @@ internal object SupabaseApi {
         pickup: String,
         dropoff: String,
         departureAt: String,
+        arrivalAt: String?,
         farePkr: Int,
         seats: Int
     ) = withContext(Dispatchers.IO) {
@@ -580,7 +581,7 @@ internal object SupabaseApi {
                 .put("pickup_point", pickup.trim())
                 .put("dropoff_point", dropoff.trim())
                 .put("departure_at", departureAt)
-                .put("arrival_at", JSONObject.NULL)
+                .put("arrival_at", arrivalAt?.let { org.json.JSONObject.wrap(it) } ?: JSONObject.NULL)
                 .put("fare_pkr", farePkr)
                 .put("total_seats", seats)
                 .put("available_seats", seats),
