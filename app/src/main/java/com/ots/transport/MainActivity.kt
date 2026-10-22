@@ -732,52 +732,60 @@ private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
 @Composable
 private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onBook: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }; Column { Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your seat", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold); Text(ride.route, color = Muted, fontSize = 12.sp) } }
-        Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(24.dp)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (isUrdu) "گاڑی میں نشستوں کی ترتیب" else "VEHICLE SEATING PLAN", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
-                Spacer(Modifier.height(12.dp))
-                Box(Modifier.width(260.dp).clip(RoundedCornerShape(28.dp)).background(Color(0xFF203D54)).padding(14.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("FRONT", color = Color(0xFFB8C9D7), fontSize = 9.sp); Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFFB8C9D7), modifier = Modifier.size(18.dp)) }
-                        Spacer(Modifier.height(14.dp))
-                        Text(if (isUrdu) "ڈرائیور کی نشست" else "DRIVER SEAT — NOT BOOKABLE", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            Surface(color = Color(0xFF35546A), shape = RoundedCornerShape(10.dp)) {
-                                Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(if (isUrdu) "ڈرائیور" else "DRIVER", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }
+            Column {
+                Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your seat", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                Text(ride.route, color = Muted, fontSize = 12.sp)
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(28.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(if (isUrdu) "گاڑی کا 3D سیٹ پلان" else "3D VEHICLE SEATING PLAN", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
+                Text(if (isUrdu) "منتخب کرنے کے لیے نشست پر ٹیپ کریں" else "Tap an available passenger seat", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                // Layered metallic body, windshield and cabin create a raised, 3D top-down car view.
+                Box(
+                    Modifier.width(300.dp).height(405.dp)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF9EABB7), Color(0xFFE1E7EC), Color(0xFF748493))), RoundedCornerShape(58.dp))
+                        .padding(8.dp)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF1D354A), Color(0xFF29485D), Color(0xFF12283A))), RoundedCornerShape(52.dp))
+                        .padding(horizontal = 12.dp, vertical = 13.dp)
+                ) {
+                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Hood and windshield at the front of the car.
+                        Box(Modifier.fillMaxWidth().height(44.dp).background(Brush.verticalGradient(listOf(Color(0xFF526D80), Color(0xFF142B3E))), RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp, bottomStart = 12.dp, bottomEnd = 12.dp)), contentAlignment = Alignment.Center) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("FRONT", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                                Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(19.dp))
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Text(if (isUrdu) "اگلی نشست" else "FRONT PASSENGER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Box(Modifier.fillMaxWidth()) {
-                            val frontAvailable = ride.totalSeats >= 1
-                            SeatButton("Seat 1", seat == "Seat 1", onSeat, frontAvailable)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            DriverSeatVisual(Modifier.weight(1f), isUrdu)
+                            SeatButton("Seat 1", seat == "Seat 1", onSeat, ride.totalSeats >= 1, Modifier.weight(1f))
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Text(if (isUrdu) "پچھلی نشستیں — 3" else "REAR ROW — 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(if (isUrdu) "اگلی نشستیں" else "FRONT ROW", color = Color(0xFFB8C9D7), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Box(Modifier.fillMaxWidth().height(10.dp).background(Color(0xFF101F2C), RoundedCornerShape(50.dp)))
+                        Text(if (isUrdu) "پچھلی قطار — 3 نشستیں" else "REAR ROW • 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             (2..4).forEach { number ->
-                                Box(Modifier.weight(1f)) {
-                                    val label = "Seat " + number
-                                    SeatButton(label, seat == label, onSeat, number <= ride.totalSeats)
-                                }
+                                val label = "Seat $number"
+                                SeatButton(label, seat == label, onSeat, number <= ride.totalSeats, Modifier.weight(1f))
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(if (isUrdu) "کل 5 نشستیں: 1 ڈرائیور، 1 اگلی مسافر نشست، اور 3 پچھلی مسافر نشستیں۔ صرف مسافروں کی نشستیں بک کی جا سکتی ہیں۔" else "Five seats total: 1 driver, 1 front passenger and 3 rear passengers. Only the four passenger seats can be booked.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
-                            Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF2B6C68))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب کرنے کے لیے دستیاب" else "Tap to select", color = Color.White, fontSize = 9.sp) }
+                        Spacer(Modifier.weight(1f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(if (isUrdu) "نشستیں منظور شدہ گاڑی کی گنجائش کے مطابق ہیں۔ بکنگ کے وقت دستیابی سرور سے تصدیق ہوتی ہے۔" else "Seat layout reflects the approved vehicle capacity. Seat availability is validated when you book.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
+                    Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF2B8B7F))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "دستیاب" else "Available", color = Color.White, fontSize = 9.sp) }
+                    Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF536273))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "بک" else "Full", color = Color.White, fontSize = 9.sp) }
+                }
+                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی۔ دستیابی بکنگ کے وقت تصدیق ہوتی ہے۔" else "The driver seat cannot be booked. Seat availability is checked when you confirm.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
             }
         }
         Text(if (isUrdu) "پک اَپ اور منزل" else "Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -802,15 +810,47 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
 }
 
 @Composable
-private fun SeatButton(label: String, selected: Boolean, onSeat: (String) -> Unit, available: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(68.dp).clip(RoundedCornerShape(12.dp)).background(if (selected) Gold else if (available) Color(0xFF2B6C68) else Color(0xFF4A5E6F)).clickable(enabled = available) { onSeat(label) }.padding(vertical = 11.dp, horizontal = 4.dp)) {
-        Icon(Icons.Default.EventSeat, null, tint = if (selected) Ink else Color.White, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(5.dp)); Text(label.removePrefix("Rear "), color = if (selected) Ink else Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(if (selected) "SELECTED" else if (available) "AVAILABLE" else "FULL", color = if (selected) Ink else Color(0xFFD9E7ED), fontSize = 6.sp)
+private fun DriverSeatVisual(modifier: Modifier = Modifier, isUrdu: Boolean) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.fillMaxWidth().height(56.dp).background(Brush.verticalGradient(listOf(Color(0xFF647789), Color(0xFF334B60))), RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.DirectionsCar, null, tint = Gold, modifier = Modifier.size(25.dp))
+        }
+        Text(if (isUrdu) "ڈرائیور" else "DRIVER", color = Color(0xFFD7E2E9), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        Text(if (isUrdu) "بک نہیں" else "NOT BOOKABLE", color = Color(0xFF9FB1C0), fontSize = 6.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun SeatButton(label: String, selected: Boolean, onSeat: (String) -> Unit, available: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.clip(RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(
+                if (selected) listOf(Color(0xFFFFE0A1), Gold, Color(0xFFE6A84D))
+                else if (available) listOf(Color(0xFF45A69A), Color(0xFF216E69), Color(0xFF164E50))
+                else listOf(Color(0xFF697B8C), Color(0xFF4A5B6B), Color(0xFF354555))
+            ))
+            .clickable(enabled = available) { onSeat(label) }
+            .padding(horizontal = 4.dp, vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Two raised cushions give each seat a more physical, car-seat appearance.
+        Box(Modifier.fillMaxWidth().height(35.dp).padding(horizontal = 3.dp)
+            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (selected) .75f else .28f), Color.Black.copy(alpha = .15f))), RoundedCornerShape(11.dp))
+            .padding(4.dp)) {
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                if (selected) Color(0xFFFFF0CB) else Color(0xFFB7C6D1).copy(alpha = .9f),
+                if (selected) Color(0xFFE7B15C) else Color(0xFF64798B)
+            )), RoundedCornerShape(8.dp)))
+        }
+        Text(label, color = if (selected) Ink else Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(if (selected) "SELECTED" else if (available) "AVAILABLE" else "FULL", color = if (selected) Ink else Color(0xFFD9E7ED), fontSize = 5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
 private fun fareFor(ride: Ride, seat: String): Int = ride.price
+
+
 
 @Composable
 private fun BookingsScreen(
