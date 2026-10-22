@@ -410,18 +410,24 @@ private fun OTSApp(
                                 }
                             }
                         },
-                        onEditTrip = { trip, destination, pickup, dropoff, date, time, fare, seats ->
+                        onEditTrip = { trip, destination, pickup, dropoff, date, time, arrivalText, fare, seats ->
                             val active = session
                             val departure = toDepartureIso(date, time)
+                            val arrival = if (arrivalText.isBlank()) null else {
+                                val parts = arrivalText.split(" ")
+                                if (parts.size == 2) toDepartureIso(parts[0], parts[1]) else null
+                            }
                             if (active == null) {
                                 authMessage = "Please sign in first."
                                 showOtp = true
                             } else if (departure == null) {
                                 notice = "Enter a valid future departure date and time."
+                            } else if (arrivalText.isNotBlank() && (arrival == null || arrival <= departure)) {
+                                notice = "Estimated arrival must be a valid date/time after departure."
                             } else {
                                 scope.launch {
                                     try {
-                                        SupabaseApi.updateTrip(active, trip.id, destination, pickup, dropoff, departure, fare, seats)
+                                        SupabaseApi.updateTrip(active, trip.id, destination, pickup, dropoff, departure, arrival, fare, seats)
                                         driverTrips = SupabaseApi.getDriverTrips(active)
                                         notice = "Trip updated."
                                     } catch (e: Exception) {
@@ -1241,7 +1247,7 @@ private fun DriverScreen(
     onLogin: () -> Unit,
     onUpdateVehicle: (SupabaseApi.Vehicle, String, String, Int, String, String, Int, String, List<Uri>) -> Unit,
     onCancelTrip: (SupabaseApi.Trip) -> Unit,
-    onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, Int, Int) -> Unit,
+    onEditTrip: (SupabaseApi.Trip, String, String, String, String, String, String, Int, Int) -> Unit,
     onPublishTrip: (String, String, String, String, String, String, Int, Int) -> Unit,
     onSubmit: (String, String, Int, String, String, String, Int, String, String, Uri?, Uri?, List<Uri>) -> Unit
 ) {
@@ -1278,6 +1284,7 @@ private fun DriverScreen(
     var editDropoff by remember { mutableStateOf("") }
     var editDate by remember { mutableStateOf("") }
     var editTime by remember { mutableStateOf("") }
+    var editArrival by remember { mutableStateOf("") }
     var editFare by remember { mutableStateOf("") }
     var editSeats by remember { mutableStateOf("") }
     var driverPhoto by remember { mutableStateOf<Uri?>(null) }
@@ -1409,6 +1416,7 @@ private fun DriverScreen(
                                 editDropoff = trip.dropoffPoint
                                 editDate = trip.departureAt.take(10)
                                 editTime = trip.departureAt.substringAfter("T").take(5)
+                                editArrival = trip.arrivalAt?.replace("T", " ")?.take(16).orEmpty()
                                 editFare = trip.farePkr.toString()
                                 editSeats = trip.totalSeats.toString()
                             }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Edit trip") }
@@ -1464,6 +1472,7 @@ private fun DriverScreen(
                     OutlinedTextField(editDropoff, { editDropoff = it }, label = { Text("Drop-off point") }, singleLine = true)
                     OutlinedTextField(editDate, { editDate = it.take(10) }, label = { Text("Date (YYYY-MM-DD)") }, singleLine = true)
                     OutlinedTextField(editTime, { editTime = it.take(5) }, label = { Text("Time (HH:MM)") }, singleLine = true)
+                    OutlinedTextField(editArrival, { editArrival = it.take(16) }, label = { Text("Estimated arrival (YYYY-MM-DD HH:MM, optional)") }, singleLine = true)
                     OutlinedTextField(editFare, { editFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text("Fare per seat (PKR)") }, singleLine = true)
                     OutlinedTextField(editSeats, { editSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats") }, singleLine = true)
                     Text("Trips with active bookings cannot change their route, time, fare or seats. OTS administration must handle those cases.", color = Muted, fontSize = 11.sp)
@@ -1471,8 +1480,8 @@ private fun DriverScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = editDestination.isNotBlank() && editPickup.isNotBlank() && editDropoff.isNotBlank() && (editFare.toIntOrNull() ?: 0) > 0 && (editSeats.toIntOrNull() ?: 0) in 1..20,
-                    onClick = { editCandidate?.let { onEditTrip(it, editDestination, editPickup, editDropoff, editDate, editTime, editFare.toIntOrNull() ?: 0, editSeats.toIntOrNull() ?: 0) }; editCandidate = null },
+                    enabled = editDestination.isNotBlank() && editPickup.isNotBlank() && editDropoff.isNotBlank() && (editArrival.isBlank() || editArrival.length == 16) && (editFare.toIntOrNull() ?: 0) > 0 && (editSeats.toIntOrNull() ?: 0) in 1..4,
+                    onClick = { editCandidate?.let { onEditTrip(it, editDestination, editPickup, editDropoff, editDate, editTime, editArrival, editFare.toIntOrNull() ?: 0, editSeats.toIntOrNull() ?: 0) }; editCandidate = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Ink)
                 ) { Text("Save changes") }
             },
