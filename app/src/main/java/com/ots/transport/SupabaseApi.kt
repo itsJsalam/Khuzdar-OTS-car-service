@@ -544,7 +544,7 @@ internal object SupabaseApi {
             .put("pickup_point", pickupPoint)
             .put("dropoff_point", dropoffPoint)
             .put("luggage_type", luggageType)
-            .put("status", "confirmed")
+            .put("status", "pending_payment")
         val response = request(
             "/rest/v1/bookings",
             "POST",
@@ -555,6 +555,33 @@ internal object SupabaseApi {
         val rows = JSONArray(response)
         if (rows.length() == 0) throw IllegalStateException("The booking service did not return a ticket.")
         rows.getJSONObject(0).getString("id")
+    }
+
+    suspend fun submitPaymentReference(
+        session: Session,
+        bookingId: String,
+        paymentMethod: String,
+        transactionReference: String,
+        amountPkr: Int
+    ) = withContext(Dispatchers.IO) {
+        require(paymentMethod in setOf("easypaisa", "jazzcash")) { "Choose Easypaisa or JazzCash." }
+        require(transactionReference.trim().length in 4..120) { "Enter the transaction reference shown by your payment app." }
+        val payload = JSONObject()
+            .put("booking_id", bookingId)
+            .put("passenger_id", session.userId)
+            .put("payment_method", paymentMethod)
+            .put("recipient_phone", "03312717330")
+            .put("amount_pkr", amountPkr)
+            .put("transaction_reference", transactionReference.trim())
+            .put("status", "pending")
+        request(
+            "/rest/v1/payment_submissions",
+            "POST",
+            token = session.accessToken,
+            body = payload,
+            prefer = "return=minimal"
+        )
+        Unit
     }
 
     private fun uploadPrivateFile(
