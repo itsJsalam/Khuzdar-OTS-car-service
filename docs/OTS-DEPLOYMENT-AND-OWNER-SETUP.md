@@ -8,6 +8,7 @@
 - Pending-payment booking holds, which expire after 15 minutes if no payment reference is submitted. Once a reference is submitted, the hold remains for administrator review.
 - Manual Easypaisa/JazzCash transfer reference submission and an administrator review screen. An administrator must verify the transfer in the actual wallet account before confirming the booking.
 - Free Google Maps directions opened externally from the seat-selection screen.
+- User-initiated sharing of the last known phone location (if permission is granted) and an SOS button that opens the dialer with Rescue 1122; it does not place a call automatically.
 - Supabase phone OTP send/verify client flow, ready for SMS provider configuration.
 - Hosted account-verification landing page: https://ots-auth-portal.vercel.app/
 - Generated booking-reference QR codes. The QR is an identifier only; it is not independent proof of boarding.
@@ -32,7 +33,7 @@ The wallet flow is a **manual transfer and review workflow**, not a direct Easyp
 - Complete the Supabase Auth URL/provider setup above and test real email confirmation, Google OAuth and SMS delivery.
 - Test passenger registration, driver application review, trip publication, seat collisions, payment expiry, manual payment review and cancellation on physical Android devices.
 - Configure the owner's email templates later if a custom sender/domain is desired.
-- Verify actual live-location sharing, SOS escalation and any future automated notifications before describing them as production-ready.
+- Continuous live GPS tracking, automatic SOS escalation and push notifications are not implemented yet; the current location action shares a last-known location once and SOS only opens the dialer.
 - The app's current QR is a booking reference only; server-side boarding verification has not been implemented.
 
 ## Builds
