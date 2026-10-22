@@ -935,7 +935,11 @@ private fun PaymentScreen(
                 if (submitted) {
                     Text("Your reference is waiting for an OTS administrator to check the actual transfer. Your ticket is not confirmed until that review is complete.", color = Muted, fontSize = 13.sp)
                 } else {
-                    Text("1. Open ${if (method == "easypaisa") "Easypaisa" else "JazzCash"} on your phone.\\n2. Transfer exactly PKR $amount to 03312717330.\\n3. Enter the transaction reference shown by your payment app below.", color = Muted, fontSize = 13.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("1. Open ${if (method == "easypaisa") "Easypaisa" else "JazzCash"} on your phone.", color = Muted, fontSize = 13.sp)
+                        Text("2. Transfer exactly PKR $amount to 03312717330.", color = Muted, fontSize = 13.sp)
+                        Text("3. Enter the transaction reference shown by your payment app below.", color = Muted, fontSize = 13.sp)
+                    }
                     OutlinedTextField(
                         value = transactionReference,
                         onValueChange = { transactionReference = it.take(120) },
