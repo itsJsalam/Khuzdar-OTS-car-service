@@ -106,6 +106,13 @@ private fun OTSApp(
     var booked by remember { mutableStateOf(false) }
     var showOtp by remember { mutableStateOf(false) }
     var showTicket by remember { mutableStateOf(false) }
+    var showPayment by remember { mutableStateOf(false) }
+    var pendingBookingId by remember { mutableStateOf("") }
+    var pendingPaymentAmount by remember { mutableStateOf(0) }
+    var paymentMethod by remember { mutableStateOf("easypaisa") }
+    var paymentSubmitting by remember { mutableStateOf(false) }
+    var paymentSubmitted by remember { mutableStateOf(false) }
+    var paymentMessage by remember { mutableStateOf("") }
     var ticketReference by remember { mutableStateOf("") }
     var ticketFare by remember { mutableStateOf(0) }
     var liveBookings by remember { mutableStateOf<List<SupabaseApi.Booking>>(emptyList()) }
@@ -205,6 +212,7 @@ private fun OTSApp(
         }
     }
     androidx.activity.compose.BackHandler(enabled = showTicket) { showTicket = false; tab = "Bookings" }
+    androidx.activity.compose.BackHandler(enabled = showPayment && !paymentSubmitting) { showPayment = false; tab = "Bookings" }
     androidx.activity.compose.BackHandler(enabled = showOtp && !authBusy) { showOtp = false }
     androidx.activity.compose.BackHandler(enabled = tab == "Seat" && !showTicket) { tab = "Rides" }
     androidx.activity.compose.BackHandler(enabled = !showTicket && !showOtp && tab != "Seat" && (tab != "Home" || role == "Driver")) {
@@ -238,6 +246,38 @@ private fun OTSApp(
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     showTicket -> TicketScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, fare = if (ticketFare > 0) ticketFare else fareFor(selectedRide ?: sampleRides[0], selectedSeat), reference = ticketReference, onBack = { showTicket = false; tab = "Bookings" })
+                    showPayment -> PaymentScreen(
+                        isUrdu = language == "ur",
+                        amount = pendingPaymentAmount,
+                        bookingId = pendingBookingId,
+                        method = paymentMethod,
+                        onMethod = { paymentMethod = it },
+                        submitting = paymentSubmitting,
+                        submitted = paymentSubmitted,
+                        message = paymentMessage,
+                        onBack = { showPayment = false; tab = "Bookings" },
+                        onSubmit = { method, reference ->
+                            val active = session
+                            if (active == null) {
+                                paymentMessage = "Your session expired. Sign in again before submitting the payment reference."
+                            } else {
+                                scope.launch {
+                                    paymentSubmitting = true
+                                    paymentMessage = ""
+                                    try {
+                                        SupabaseApi.submitPaymentReference(active, pendingBookingId, method, reference, pendingPaymentAmount)
+                                        paymentSubmitted = true
+                                        paymentMessage = "Your transaction reference was submitted. OTS will verify it manually before confirming your ticket."
+                                        try { liveBookings = SupabaseApi.getBookings(active) } catch (_: Exception) {}
+                                    } catch (e: Exception) {
+                                        paymentMessage = e.message ?: "The payment reference could not be submitted. Please check it and retry."
+                                    } finally {
+                                        paymentSubmitting = false
+                                    }
+                                }
+                            }
+                        }
+                    )
                     tab == "Rides" -> RidesScreen(isUrdu = language == "ur", route = selectedRoute, trips = liveTrips, loading = tripsLoading, error = tripsError, onRoute = { selectedRoute = it }, onSelect = { selectedRide = it; selectedDrop = it.city; selectedSeat = "Seat 1"; tab = "Seat" })
                     tab == "Seat" -> SeatScreen(isUrdu = language == "ur", ride = selectedRide ?: sampleRides[0], seat = selectedSeat, onSeat = { selectedSeat = it }, drop = selectedDrop, onDrop = { selectedDrop = it }, luggage = luggage, onLuggage = { luggage = it }, onBack = { tab = "Rides" }, onBook = {
                         val trip = selectedRide
@@ -250,13 +290,15 @@ private fun OTSApp(
                         } else {
                             scope.launch {
                                 try {
-                                    val ticketId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat), trip.pickupPoint, trip.dropoffPoint ?: trip.city, luggage)
-                                    booked = true
-                                    ticketReference = ticketId
-                                    ticketFare = fareFor(trip, selectedSeat)
-                                    showTicket = true
-                                    try { liveBookings = SupabaseApi.getBookings(active) } catch (e: Exception) { bookingsError = e.message ?: "Your booking is saved, but booking history could not refresh yet." }
-                                    notice = "Your booking is confirmed. Ticket reference: " + ticketId.take(8).uppercase()
+                                    val bookingId = SupabaseApi.createBooking(active, trip.tripId, selectedSeat, fareFor(trip, selectedSeat), trip.pickupPoint, trip.dropoffPoint ?: trip.city, luggage)
+                                    pendingBookingId = bookingId
+                                    pendingPaymentAmount = fareFor(trip, selectedSeat)
+                                    paymentMethod = "easypaisa"
+                                    paymentSubmitted = false
+                                    paymentMessage = ""
+                                    showPayment = true
+                                    try { liveBookings = SupabaseApi.getBookings(active) } catch (_: Exception) {}
+                                    notice = "Seat held for 15 minutes. Complete the payment steps to submit your transaction reference."
                                 } catch (e: Exception) {
                                     notice = e.message ?: "The booking could not be completed. Please try again."
                                 }
@@ -730,6 +772,80 @@ private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
 }
 
 @Composable
+private fun PaymentScreen(
+    isUrdu: Boolean,
+    amount: Int,
+    bookingId: String,
+    method: String,
+    onMethod: (String) -> Unit,
+    submitting: Boolean,
+    submitted: Boolean,
+    message: String,
+    onBack: () -> Unit,
+    onSubmit: (String, String) -> Unit
+) {
+    var transactionReference by remember(bookingId) { mutableStateOf("") }
+    Column(
+        Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(15.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack, enabled = !submitting) { Icon(Icons.Default.ArrowBack, null, tint = Ink) }
+            Column {
+                Text(if (isUrdu) "ادائیگی کا طریقہ" else "Payment method", color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Booking \${bookingId.take(8).uppercase()}", color = Muted, fontSize = 12.sp)
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("TOTAL TO TRANSFER", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                Text("PKR $amount", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
+                Text("Recipient account number", color = Color(0xFFB8C9D7), fontSize = 12.sp)
+                Text("03312717330", color = Gold, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Use this number in the selected Easypaisa or JazzCash app. Confirm the recipient details before sending money.", color = Color(0xFFD5E0E8), fontSize = 12.sp)
+            }
+        }
+        Text("Choose transfer method", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = method == "easypaisa", onClick = { onMethod("easypaisa") }, label = { Text("Easypaisa") }, leadingIcon = if (method == "easypaisa") ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
+            FilterChip(selected = method == "jazzcash", onClick = { onMethod("jazzcash") }, label = { Text("JazzCash") }, leadingIcon = if (method == "jazzcash") ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Text(if (submitted) "Payment reference submitted" else "After you transfer the money", color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                if (submitted) {
+                    Text("Your reference is waiting for an OTS administrator to check the actual transfer. Your ticket is not confirmed until that review is complete.", color = Muted, fontSize = 13.sp)
+                } else {
+                    Text("1. Open \${if (method == "easypaisa") "Easypaisa" else "JazzCash"} on your phone.\\n2. Transfer exactly PKR $amount to 03312717330.\\n3. Enter the transaction reference shown by your payment app below.", color = Muted, fontSize = 13.sp)
+                    OutlinedTextField(
+                        value = transactionReference,
+                        onValueChange = { transactionReference = it.take(120) },
+                        label = { Text("Transaction reference / TID") },
+                        placeholder = { Text("Enter the reference from your receipt") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !submitting
+                    )
+                    Text("This is a manual transfer flow, not an automatic wallet gateway. Do not submit until you have actually sent the money.", color = Color(0xFF8B5A18), fontSize = 11.sp)
+                }
+                if (message.isNotBlank()) Text(message, color = if (submitted) Color(0xFF16876E) else Color(0xFFB42318), fontSize = 12.sp)
+                Button(
+                    onClick = { if (submitted) onBack() else onSubmit(method, transactionReference.trim()) },
+                    enabled = !submitting && (submitted || transactionReference.trim().length >= 4),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink),
+                    shape = RoundedCornerShape(13.dp)
+                ) {
+                    if (submitting) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                    else Text(if (submitted) "Back to my bookings" else "Submit payment reference", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Text("Seat holds expire after 15 minutes if no valid payment submission is made. OTS staff must verify transfers manually before a confirmed ticket is issued.", color = Muted, fontSize = 11.sp)
+    }
+}
+
+@Composable
 private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (String) -> Unit, drop: String, onDrop: (String) -> Unit, luggage: String, onLuggage: (String) -> Unit, onBack: () -> Unit, onBook: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -897,9 +1013,13 @@ private fun BookingsScreen(
                         Text("${booking.origin} → ${booking.destination}", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                         Text(booking.departureAt.replace("T", " ").take(16), color = Muted, fontSize = 12.sp)
                         Text("Seat: ${booking.seatLabels.ifBlank { "Not assigned" }}", color = Navy2, fontSize = 12.sp)
-                        Button(onClick = { onTicket(booking) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open ticket") }
-                        if (booking.status == "confirmed") OutlinedButton(onClick = { onCancel(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Cancel, null); Spacer(Modifier.width(8.dp)); Text("Request cancellation") }
-                        if (booking.status == "cancel_requested") Text("Your cancellation request is waiting for OTS review.", color = Muted, fontSize = 11.sp)
+                        if (booking.status == "confirmed") {
+                            Button(onClick = { onTicket(booking) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.ConfirmationNumber, null); Spacer(Modifier.width(8.dp)); Text("Open confirmed ticket") }
+                            OutlinedButton(onClick = { onCancel(booking) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Cancel, null); Spacer(Modifier.width(8.dp)); Text("Request cancellation") }
+                        } else if (booking.status == "pending_payment") {
+                            Text("Payment pending review. Your seat is held for 15 minutes; a ticket appears after OTS verifies your payment.", color = Color(0xFF9B681F), fontSize = 11.sp)
+                        } else if (booking.status == "cancel_requested") Text("Your cancellation request is waiting for OTS review.", color = Muted, fontSize = 11.sp)
+                        else if (booking.status == "cancelled") Text("This booking was cancelled and the seat is no longer held.", color = Muted, fontSize = 11.sp)
                     }
                 }
             }
