@@ -1,6 +1,7 @@
 package com.ots.transport
 
 import android.os.Bundle
+import android.graphics.Bitmap
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -842,6 +846,8 @@ private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, r
                 }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
                 Text("BOOKING REF  " + reference.take(12).uppercase(), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                BookingQrCode(reference = reference)
+                Text("Scan to identify this booking", color = Muted, fontSize = 10.sp)
                 Text(ride.route, color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 Text(ride.time, color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail("SEAT", seat); TicketDetail("DRIVER", ride.driver); TicketDetail("FARE", "PKR $fare") }
@@ -851,6 +857,39 @@ private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, r
             }
         }
         Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)) { Text("Done", fontWeight = FontWeight.Bold) }
+    }
+}
+
+
+@Composable
+private fun BookingQrCode(reference: String) {
+    val qrBitmap = remember(reference) {
+        try {
+            val matrix = QRCodeWriter().encode(
+                "OTS-BOOKING:$reference",
+                BarcodeFormat.QR_CODE,
+                320,
+                320
+            )
+            Bitmap.createBitmap(320, 320, Bitmap.Config.ARGB_8888).also { bitmap ->
+                for (x in 0 until 320) {
+                    for (y in 0 until 320) {
+                        bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+    if (qrBitmap != null) {
+        Image(
+            bitmap = qrBitmap.asImageBitmap(),
+            contentDescription = "QR code for booking reference $reference",
+            modifier = Modifier.size(144.dp).clip(RoundedCornerShape(8.dp))
+        )
+    } else {
+        Text("QR code unavailable", color = Muted, fontSize = 11.sp)
     }
 }
 
