@@ -740,33 +740,33 @@ private fun toDepartureIso(date: String, time: String): String? {
 @Composable
 private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit, onAccount: (String, Boolean) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Paper)) {
-        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Ink, Navy2, Color(0xFF23536A)))).padding(start = 22.dp, end = 22.dp, top = 24.dp, bottom = 28.dp)) {
+        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF061A3A), Color(0xFF0A3B78), Color(0xFF1476B8)))).padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 24.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OtsLogo(44.dp)
                     Spacer(Modifier.width(11.dp))
-                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 17.sp); Text(if (isUrdu) "خضدار • شہروں کے درمیان سفر" else "Khuzdar • Intercity journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 18.sp); Text(if (isUrdu) "خضدار • شہروں کے درمیان سفر" else "KHU​​Z​​DAR  •  INTERCITY TRAVEL", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
                     Spacer(Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (isUrdu) "آپ کا اگلا سفر" else "YOUR NEXT JOURNEY", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Text(if (isUrdu) "سفر کا نیا انداز" else "YOUR JOURNEY, REIMAGINED", color = Color(0xFFFFD37C), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                         Spacer(Modifier.height(8.dp))
-                        Text(if (isUrdu) "راستہ\nآپ کا ہے۔" else "The road is\nyours.", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 37.sp)
+                        Text(if (isUrdu) "راستہ\nآپ کا ہے۔" else "Ride beyond\nthe ordinary.", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
                         Spacer(Modifier.height(7.dp))
-                        Text(if (isUrdu) "اپنی نشست محفوظ کریں، اعتماد کے ساتھ سفر کریں۔" else "Reserve your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
+                        Text(if (isUrdu) "اپنی نشست محفوظ کریں، اعتماد کے ساتھ سفر کریں۔" else "Choose your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
                     }
-                    OtsLogo(78.dp)
+                    Box(Modifier.size(112.dp).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF1B5F9D), Color(0xFF06234D)))), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFF8DD3FF), modifier = Modifier.size(88.dp)); Text("OTS", Modifier.align(Alignment.BottomEnd).padding(8.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 10.sp) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoleChip(if (isUrdu) "مسافر" else "Passenger", role == "Passenger") { onRole("Passenger") }
                     RoleChip(if (isUrdu) "ڈرائیور" else "Driver", role == "Driver") { onRole("Driver"); onDriver() }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Button(onClick = { onAccount("Passenger", false) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink), shape = RoundedCornerShape(12.dp)) {
+                    Button(onClick = { onAccount("Passenger", false) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD17A), contentColor = Color(0xFF061A3A)), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Default.Person, null); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "مسافر لاگ اِن" else "Passenger Login", fontSize = 11.sp)
                     }
-                    OutlinedButton(onClick = { onAccount("Passenger", true) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                    OutlinedButton(onClick = { onAccount("Passenger", true) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF8CCEFF)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                         Text(if (isUrdu) "اکاؤنٹ بنائیں" else "Sign Up", fontSize = 11.sp)
                     }
                 }
