@@ -739,51 +739,123 @@ private fun toDepartureIso(date: String, time: String): String? {
 
 @Composable
 private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, onRoute: (String) -> Unit, onSearch: () -> Unit, onDriver: () -> Unit, onAccount: (String, Boolean) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Paper)) {
-        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF061A3A), Color(0xFF0A3B78), Color(0xFF1476B8)))).padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 24.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC)).verticalScroll(rememberScrollState())) {
+        // Redesigned to follow the blue-and-white reference screen supplied by the user.
+        Box(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 42.dp, bottomEnd = 42.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF1554D1), Color(0xFF0C3EAA), Color(0xFF092C7A))))
+                .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 64.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OtsLogo(44.dp)
-                    Spacer(Modifier.width(11.dp))
-                    Column { Text("OTS TRANSPORT", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp, fontSize = 18.sp); Text(if (isUrdu) "خضدار • شہروں کے درمیان سفر" else "KHU​​Z​​DAR  •  INTERCITY TRAVEL", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
-                    Spacer(Modifier.weight(1f))
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    OtsLogo(46.dp)
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (isUrdu) "سفر کا نیا انداز" else "YOUR JOURNEY, REIMAGINED", color = Color(0xFFFFD37C), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(if (isUrdu) "راستہ\nآپ کا ہے۔" else "Ride beyond\nthe ordinary.", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 34.sp)
-                        Spacer(Modifier.height(7.dp))
-                        Text(if (isUrdu) "اپنی نشست محفوظ کریں، اعتماد کے ساتھ سفر کریں۔" else "Choose your seat. Travel with confidence.", color = Color(0xFFD0DCE6), fontSize = 12.sp)
+                        Text("OTS TRANSPORT", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(if (isUrdu) "خضدار • انٹر سٹی سفر" else "KHUZDAR • INTERCITY TRAVEL", color = Color(0xFFD8E5FF), fontSize = 11.sp)
                     }
-                    Box(Modifier.size(112.dp).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF1B5F9D), Color(0xFF06234D)))), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFF8DD3FF), modifier = Modifier.size(88.dp)); Text("OTS", Modifier.align(Alignment.BottomEnd).padding(8.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 10.sp) }
+                    IconButton(onClick = { onAccount(role, false) }) {
+                        Icon(Icons.Default.Person, contentDescription = "Account", tint = Color.White, modifier = Modifier.size(25.dp))
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(if (isUrdu) "خوش آمدید" else "WELCOME TO OTS", color = Color(0xFFFFD17A), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text(if (isUrdu) "آج کہاں جانا ہے؟" else "Ready for your next journey?", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (isUrdu) "آرام سے سفر کریں۔ اپنی نشست پہلے محفوظ کریں۔" else "Book your seat ahead. Travel with confidence.", color = Color(0xFFD8E5FF), fontSize = 13.sp)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RoleChip(if (isUrdu) "مسافر" else "Passenger", role == "Passenger") { onRole("Passenger") }
                     RoleChip(if (isUrdu) "ڈرائیور" else "Driver", role == "Driver") { onRole("Driver"); onDriver() }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Button(onClick = { onAccount("Passenger", false) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD17A), contentColor = Color(0xFF061A3A)), shape = RoundedCornerShape(12.dp)) {
-                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "مسافر لاگ اِن" else "Passenger Login", fontSize = 11.sp)
-                    }
-                    OutlinedButton(onClick = { onAccount("Passenger", true) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF8CCEFF)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
-                        Text(if (isUrdu) "اکاؤنٹ بنائیں" else "Sign Up", fontSize = 11.sp)
-                    }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { onAccount("Passenger", true) }) { Text(if (isUrdu) "سائن اَپ" else "Sign up", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             }
         }
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(if (isUrdu) "کہاں جانا ہے؟" else "Where would you like to go?", color = Color(0xFF082C5C), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "خضدار سے اپنا راستہ منتخب کریں" else "Choose a destination from Khuzdar", color = Color(0xFF70849B), fontSize = 12.sp) }; Text(if (isUrdu) "۴ راستے" else "4 ROUTES", color = Navy2, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
-            val routes = if (isUrdu) listOf(Triple("Karachi", "ساحلی شہر", Icons.Default.LocationCity), Triple("Quetta", "پہاڑی راستہ", Icons.Default.Terrain), Triple("Sindh", "لاڑکانہ • رتو ڈیرو", Icons.Default.Route), Triple("Makran", "تربت • گوادر", Icons.Default.Waves)) else listOf(Triple("Karachi", "Coastal metropolis", Icons.Default.LocationCity), Triple("Quetta", "Mountain gateway", Icons.Default.Terrain), Triple("Sindh", "Larkana • Ratto Dero", Icons.Default.Route), Triple("Makran", "Turbat • Gwadar", Icons.Default.Waves))
-            routes.forEachIndexed { index, route ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.horizontalGradient(listOf(Color.White, Color(0xFFF0F7FF)))).clickable { onRoute(if (route.first == "Sindh") "Larkana" else if (route.first == "Makran") "Gwadar" else route.first) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(listOf(Color(0xFFDCEEFF), Color(0xFFE2F2FF), Color(0xFFDCE8FA), Color(0xFFE0F5FF))[index]), contentAlignment = Alignment.Center) { Icon(route.third, null, tint = Navy2, modifier = Modifier.size(24.dp)) }
-                    Spacer(Modifier.width(13.dp))
-                    Column(Modifier.weight(1f)) { Text((if (isUrdu) "خضدار → " else "Khuzdar → ") + route.first, color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(route.second, color = Muted, fontSize = 11.sp) }
-                    Icon(Icons.Default.ArrowForward, null, tint = Navy2)
+        // Floating route search overlaps the blue header, like the supplied reference.
+        Card(
+            Modifier.fillMaxWidth().padding(horizontal = 22.dp).offset(y = (-28).dp),
+            shape = RoundedCornerShape(50.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Row(Modifier.fillMaxWidth().clickable { onSearch() }.padding(horizontal = 20.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Search, null, tint = Color(0xFF1554D1), modifier = Modifier.size(27.dp))
+                Spacer(Modifier.width(13.dp))
+                Text(if (isUrdu) "کہاں جانا ہے؟" else "Where to?", color = Color(0xFF7B879B), fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.Schedule, null, tint = Color(0xFF1554D1), modifier = Modifier.size(23.dp))
+            }
+        }
+        Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 0.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Card(
+                Modifier.fillMaxWidth().height(152.dp).clickable { onSearch() },
+                shape = RoundedCornerShape(27.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111A32))
+            ) {
+                Row(Modifier.fillMaxSize().padding(22.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(color = Color(0xFF30394D), shape = RoundedCornerShape(50.dp)) {
+                            Text(if (isUrdu) "روزانہ سفر" else "DAILY RIDES", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                        Text(if (isUrdu) "OTS انٹر سٹی" else "OTS Commute", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "منظور شدہ ڈرائیور • واضح کرایہ" else "Intercity rides from Khuzdar", color = Color(0xFFCFD6E3), fontSize = 12.sp)
+                    }
+                    Box(Modifier.size(70.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF29334C)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.DirectionsCar, null, tint = Color.White, modifier = Modifier.size(43.dp))
+                    }
                 }
             }
-            Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A3B78))) { Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "دستیاب سفر تلاش کریں" else "Find available rides", fontWeight = FontWeight.Bold) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Card(
+                    Modifier.weight(1f).height(190.dp).clickable { onSearch() },
+                    shape = RoundedCornerShape(25.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1554D1)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Column(Modifier.fillMaxSize().padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.QrCode2, null, tint = Color.White, modifier = Modifier.size(30.dp))
+                        }
+                        Text(if (isUrdu) "سفر تلاش کریں" else "Scan Karo\nBook Karo", color = Color.White, fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "جلدی سے نشست بک کریں" else "Find a ride and reserve a seat", color = Color(0xFFDDE8FF), fontSize = 11.sp)
+                    }
+                }
+                Card(
+                    Modifier.weight(1f).height(190.dp).clickable { onSearch() },
+                    shape = RoundedCornerShape(25.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Column(Modifier.fillMaxSize().padding(19.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xFFEAF0FF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFF1554D1), modifier = Modifier.size(31.dp))
+                        }
+                        Text(if (isUrdu) "سفر بک کریں" else "Book a Ride", color = Color(0xFF121A2B), fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your route and seat", color = Color(0xFF7A8496), fontSize = 11.sp)
+                    }
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (isUrdu) "پسندیدہ راستے" else "Popular routes", color = Color(0xFF121A2B), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = onSearch) { Text(if (isUrdu) "سب دیکھیں" else "See all", color = Color(0xFF1554D1), fontWeight = FontWeight.Bold) }
+            }
+            val routes = if (isUrdu) listOf(Triple("Karachi", "ساحلی شہر", Icons.Default.LocationCity), Triple("Quetta", "پہاڑی راستہ", Icons.Default.Terrain), Triple("Sindh", "لاڑکانہ • رتو ڈیرو", Icons.Default.Route), Triple("Makran", "تربت • گوادر", Icons.Default.Waves)) else listOf(Triple("Karachi", "Coastal metropolis", Icons.Default.LocationCity), Triple("Quetta", "Mountain gateway", Icons.Default.Terrain), Triple("Sindh", "Larkana • Ratto Dero", Icons.Default.Route), Triple("Makran", "Turbat • Gwadar", Icons.Default.Waves))
+            routes.forEachIndexed { index, route ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onRoute(if (route.first == "Sindh") "Larkana" else if (route.first == "Makran") "Gwadar" else route.first).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(50.dp).clip(RoundedCornerShape(17.dp)).background(listOf(Color(0xFFE9F0FF), Color(0xFFE5F4FF), Color(0xFFECEBFF), Color(0xFFE1F7F3))[index]), contentAlignment = Alignment.Center) {
+                        Icon(route.third, null, tint = Color(0xFF1554D1), modifier = Modifier.size(25.dp))
+                    }
+                    Spacer(Modifier.width(13.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text((if (isUrdu) "خضدار → " else "Khuzdar → ") + route.first, color = Color(0xFF121A2B), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(route.second, color = Color(0xFF7B879B), fontSize = 11.sp)
+                    }
+                    Icon(Icons.Default.ArrowForward, null, tint = Color(0xFF1554D1))
+                }
+            }
+            Button(onClick = onSearch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1554D1))) {
+                Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "دستیاب سفر تلاش کریں" else "Find available rides", fontWeight = FontWeight.Bold)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("4", if (isUrdu) "راستے" else "Routes", Icons.Default.Route, Modifier.weight(1f))
                 StatCard("OTS", if (isUrdu) "ڈرائیور کی جانچ" else "Driver review", Icons.Default.Verified, Modifier.weight(1f))
