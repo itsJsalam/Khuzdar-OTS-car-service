@@ -841,7 +841,7 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
             }
             val routes = if (isUrdu) listOf(Triple("Karachi", "ساحلی شہر", Icons.Default.LocationCity), Triple("Quetta", "پہاڑی راستہ", Icons.Default.Terrain), Triple("Sindh", "لاڑکانہ • رتو ڈیرو", Icons.Default.Route), Triple("Makran", "تربت • گوادر", Icons.Default.Waves)) else listOf(Triple("Karachi", "Coastal metropolis", Icons.Default.LocationCity), Triple("Quetta", "Mountain gateway", Icons.Default.Terrain), Triple("Sindh", "Larkana • Ratto Dero", Icons.Default.Route), Triple("Makran", "Turbat • Gwadar", Icons.Default.Waves))
             routes.forEachIndexed { index, route ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onRoute(if (route.first == "Sindh") "Larkana" else if (route.first == "Makran") "Gwadar" else route.first).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onRoute(if (route.first == "Sindh") "Larkana" else if (route.first == "Makran") "Gwadar" else route.first) }.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(50.dp).clip(RoundedCornerShape(17.dp)).background(listOf(Color(0xFFE9F0FF), Color(0xFFE5F4FF), Color(0xFFECEBFF), Color(0xFFE1F7F3))[index]), contentAlignment = Alignment.Center) {
                         Icon(route.third, null, tint = Color(0xFF1554D1), modifier = Modifier.size(25.dp))
                     }
