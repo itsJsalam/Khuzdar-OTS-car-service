@@ -976,7 +976,7 @@ private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(48.dp).clip(RoundedCornerShape(15.dp)).background(Navy), contentAlignment = Alignment.Center) { Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = Gold, modifier = Modifier.size(28.dp)) }
+                Box(Modifier.size(48.dp).clip(RoundedCornerShape(15.dp)).background(Navy), contentAlignment = Alignment.Center) { Icon(when (ride.vehicleType.lowercase()) { "bus" -> Icons.Default.DirectionsBus; "coaster", "van" -> Icons.Default.AirportShuttle; else -> Icons.Default.DirectionsCar }, contentDescription = ride.vehicleType, tint = Gold, modifier = Modifier.size(28.dp)) }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text(ride.route, color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(ride.time, color = Muted, fontSize = 11.sp) }
                 Surface(color = Color(0xFFE4F7F0), shape = RoundedCornerShape(8.dp)) { Text(ride.tag, Modifier.padding(horizontal = 8.dp, vertical = 6.dp), color = Color(0xFF11765E), fontSize = 8.sp, fontWeight = FontWeight.ExtraBold) }
@@ -988,7 +988,7 @@ private fun RideCard(isUrdu: Boolean, ride: Ride, onClick: () -> Unit) {
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.VerifiedUser, null, tint = Color(0xFF16876E), modifier = Modifier.size(17.dp)); Spacer(Modifier.width(7.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(ride.driver, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text(ride.car, color = Muted, fontSize = 10.sp) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(ride.driver, color = Navy2, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text("${ride.vehicleType} • ${ride.car}", color = Muted, fontSize = 10.sp) }
                 Text("★ ${ride.rating}", color = Color(0xFF8B5A18), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "نشستیں منتخب کریں" else "View trip & choose seat"); Spacer(Modifier.width(8.dp)); Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp)) }
