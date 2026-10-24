@@ -109,6 +109,7 @@ private fun OTSApp(
     var luggage by remember { mutableStateOf("Small bag") }
     var booked by remember { mutableStateOf(false) }
     var showOtp by remember { mutableStateOf(false) }
+    var showSessionExpired by remember { mutableStateOf(false) }
     var showTicket by remember { mutableStateOf(false) }
     var showPayment by remember { mutableStateOf(false) }
     var pendingBookingId by remember { mutableStateOf("") }
@@ -195,6 +196,7 @@ private fun OTSApp(
             } catch (_: Exception) {
                 SessionStore.clear(appContext)
                 session = null
+                showSessionExpired = true
             }
         }
     }
@@ -503,6 +505,22 @@ private fun OTSApp(
                     }
                 }
             }
+            if (showSessionExpired) AlertDialog(
+                onDismissRequest = { showSessionExpired = false },
+                title = { Text(if (language == "ur") "سیشن ختم ہو گیا" else "Session expired") },
+                text = { Text(if (language == "ur") "سیکیورٹی کے لیے دوبارہ سائن اِن کریں۔ آپ کی محفوظ کردہ بکنگز حذف نہیں ہوئیں۔" else "For your security, please sign in again. Your saved bookings have not been deleted.") },
+                confirmButton = {
+                    Button(onClick = {
+                        showSessionExpired = false
+                        authMessage = if (language == "ur") "دوبارہ سائن اِن کریں۔" else "Please sign in again."
+                        authIsSignup = false
+                        showOtp = true
+                    }) { Text(if (language == "ur") "سائن اِن" else "Sign in") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSessionExpired = false }) { Text(if (language == "ur") "بعد میں" else "Later") }
+                }
+            )
             if (showOtp) AlertDialog(
                 onDismissRequest = { if (!authBusy) showOtp = false },
                 title = { Text(if (language == "ur") { if (authIsSignup) "OTS اکاؤنٹ بنائیں" else "OTS میں سائن اِن کریں" } else { if (authIsSignup) "Create your OTS account" else "Sign in to OTS" }) },
