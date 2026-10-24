@@ -813,7 +813,7 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
             Row(Modifier.fillMaxWidth().clickable { onSearch() }.padding(horizontal = 20.dp, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Search, null, tint = Color(0xFF1554D1), modifier = Modifier.size(27.dp))
                 Spacer(Modifier.width(13.dp))
-                Text(if (isUrdu) "کہاں جانا ہے؟" else "Where to?", color = Color(0xFF7B879B), fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text(if (isUrdu) "کہاں جانا ہے؟" else "Where would you like to go?", color = Color(0xFF7B879B), fontSize = 16.sp, modifier = Modifier.weight(1f))
                 Icon(Icons.Default.Schedule, null, tint = Color(0xFF1554D1), modifier = Modifier.size(23.dp))
             }
         }
@@ -828,11 +828,20 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
                         Surface(color = Color(0xFF30394D), shape = RoundedCornerShape(50.dp)) {
                             Text(if (isUrdu) "روزانہ سفر" else "DAILY RIDES", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         }
-                        Text(if (isUrdu) "OTS انٹر سٹی" else "OTS Commute", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(if (isUrdu) "منظور شدہ ڈرائیور • واضح کرایہ" else "Intercity rides from Khuzdar", color = Color(0xFFCFD6E3), fontSize = 12.sp)
+                        Text(if (isUrdu) "OTS انٹر سٹی" else "Intercity Travel", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "منظور شدہ ڈرائیور • واضح کرایہ" else "Cars • Vans • Coasters • Buses", color = Color(0xFFCFD6E3), fontSize = 12.sp)
                     }
-                    Box(Modifier.size(70.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF29334C)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.DirectionsCar, null, tint = Color.White, modifier = Modifier.size(43.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Box(Modifier.size(70.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF29334C)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.DirectionsCar, null, tint = Color.White, modifier = Modifier.size(39.dp))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf(Icons.Default.DirectionsCar, Icons.Default.AirportShuttle, Icons.Default.DirectionsBus).forEach { vehicleIcon ->
+                                Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(Color(0xFF35435D)), contentAlignment = Alignment.Center) {
+                                    Icon(vehicleIcon, null, tint = Color(0xFFFFD17A), modifier = Modifier.size(15.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -848,7 +857,7 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
                             Icon(Icons.Default.QrCode2, null, tint = Color.White, modifier = Modifier.size(30.dp))
                         }
                         Text(if (isUrdu) "سفر تلاش کریں" else "Scan Karo\nBook Karo", color = Color.White, fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(if (isUrdu) "جلدی سے نشست بک کریں" else "Find a ride and reserve a seat", color = Color(0xFFDDE8FF), fontSize = 11.sp)
+                        Text(if (isUrdu) "جلدی سے نشست بک کریں" else "Compare available vehicles and seats", color = Color(0xFFDDE8FF), fontSize = 11.sp)
                     }
                 }
                 Card(
@@ -861,8 +870,8 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xFFEAF0FF)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.DirectionsCar, null, tint = Color(0xFF1554D1), modifier = Modifier.size(31.dp))
                         }
-                        Text(if (isUrdu) "سفر بک کریں" else "Book a Ride", color = Color(0xFF121A2B), fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your route and seat", color = Color(0xFF7A8496), fontSize = 11.sp)
+                        Text(if (isUrdu) "سفر بک کریں" else "Book a Journey", color = Color(0xFF121A2B), fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "اپنی نشست منتخب کریں" else "Choose your vehicle and seats", color = Color(0xFF7A8496), fontSize = 11.sp)
                     }
                 }
             }
@@ -922,8 +931,8 @@ private fun RidesScreen(
     onSelect: (Ride) -> Unit
 ) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(if (isUrdu) "اپنا سفر تلاش کریں" else "Find your ride", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Text(if (isUrdu) "منظور شدہ OTS ڈرائیوروں کے دستیاب سفر" else "Live trips published by approved OTS drivers", color = Muted, fontSize = 12.sp)
+        Text(if (isUrdu) "اپنا سفر تلاش کریں" else "Find your journey", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (isUrdu) "منظور شدہ OTS ڈرائیوروں کے دستیاب سفر" else "Live trips by approved OTS drivers and vehicle operators", color = Muted, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("All", "Karachi", "Quetta", "Larkana", "Gwadar").forEach { city ->
                 FilterChip(selected = route == city, onClick = { onRoute(city) }, label = { Text(if (isUrdu && city == "All") "تمام" else city) }, leadingIcon = if (route == city) ({ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }) else null)
