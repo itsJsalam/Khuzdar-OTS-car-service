@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null, val totalSeats: Int = 4, val pickupPoint: String = "Khuzdar", val dropoffPoint: String? = null)
+private data class Ride(val city: String, val route: String, val time: String, val car: String, val driver: String, val price: Int, val seats: Int, val rating: String, val tag: String, val tripId: String? = null, val totalSeats: Int = 4, val pickupPoint: String = "Khuzdar", val dropoffPoint: String? = null, val vehicleType: String = "Car")
 @Composable
 private fun OtsLogo(size: androidx.compose.ui.unit.Dp) {
     Image(
@@ -1106,22 +1106,34 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
         }
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(28.dp)) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(if (isUrdu) "گاڑی کا 3D سیٹ پلان" else "3D VEHICLE SEATING PLAN", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
-                Text(if (isUrdu) "منتخب کرنے کے لیے نشست پر ٹیپ کریں" else "Tap an available passenger seat", color = Color(0xFFB8C9D7), fontSize = 10.sp)
-                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی" else "DRIVER SEAT • NOT BOOKABLE", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                SeatCarPhoto(Modifier.fillMaxWidth().height(185.dp))
-                Text(if (isUrdu) "سامنے مسافر کی نشست" else "FRONT PASSENGER", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                SeatButton("Seat 1", seat == "Seat 1", onSeat, ride.totalSeats >= 1, Modifier.fillMaxWidth())
-                Text(if (isUrdu) "پچھلی قطار — 3 نشستیں" else "REAR ROW • 3 SEATS", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    (2..4).forEach { number ->
-                        val label = "Seat $number"
-                        SeatButton(label, seat == label, onSeat, number <= ride.totalSeats, Modifier.weight(1f))
+                Text(if (isUrdu) "3D گاڑی اور نشستیں" else "3D RIDE & SEAT MAP", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
+                Text(if (isUrdu) "اپنی دستیاب نشست منتخب کریں" else "Choose any available passenger seat", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                RideVehicle3D(Modifier.fillMaxWidth().height(154.dp), ride.vehicleType, ride.car)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(ride.vehicleType.uppercase(), color = Gold, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(ride.car, color = Color(0xFFD7E2E9), fontSize = 10.sp)
+                    }
+                    Text("${ride.totalSeats} passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی" else "DRIVER SEAT • NOT BOOKABLE", color = Color(0xFFB8C9D7), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                val seatColumns = when {
+                    ride.totalSeats >= 25 -> 4
+                    ride.totalSeats >= 10 -> 3
+                    else -> 2
+                }
+                (1..ride.totalSeats.coerceAtLeast(0)).toList().chunked(seatColumns).forEachIndexed { rowIndex, rowSeats ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        rowSeats.forEach { number ->
+                            val label = "Seat $number"
+                            SeatButton(label, seat == label, onSeat, true, Modifier.weight(1f))
+                        }
+                        repeat(seatColumns - rowSeats.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (isUrdu) "کل 5 نشستیں" else "5 SEATS TOTAL", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(if (isUrdu) "4 مسافروں کے لیے" else "4 passenger seats", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                    Text("${ride.totalSeats} PASSENGER SEATS", color = Gold, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (isUrdu) "ڈرائیور کی نشست شامل نہیں" else "Driver seat excluded", color = Color(0xFFD7E2E9), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Gold)); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "منتخب" else "Selected", color = Color.White, fontSize = 9.sp) }
@@ -1149,6 +1161,60 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
             }
         }
         Text(if (isUrdu) "سفر سے پہلے ڈرائیور اور گاڑی کی تفصیلات اپنے ٹکٹ سے ملائیں۔" else "Before boarding, compare the driver and car details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun RideVehicle3D(modifier: Modifier = Modifier, vehicleType: String, vehicleName: String) {
+    val type = vehicleType.lowercase()
+    val isBus = type.contains("bus") || type.contains("coaster")
+    val isVan = type.contains("van")
+    val bodyColor = when {
+        isBus -> Color(0xFFD9E6F0)
+        isVan -> Color(0xFFE4E9F1)
+        else -> Color(0xFFE7EDF4)
+    }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        // Layered perspective body gives each vehicle category its own dimensional silhouette.
+        Box(Modifier.fillMaxWidth(if (isBus) .94f else .78f).fillMaxHeight(.68f).offset(y = 8.dp)
+            .clip(RoundedCornerShape(if (isBus) 18.dp else 30.dp)).background(Color(0xFF081321)))
+        Row(Modifier.fillMaxWidth(if (isBus) .91f else .75f).fillMaxHeight(.62f)
+            .clip(RoundedCornerShape(if (isBus) 17.dp else 28.dp)).background(bodyColor).padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            if (!isBus) {
+                Box(Modifier.width(if (isVan) 28.dp else 34.dp).fillMaxHeight(.82f)
+                    .clip(RoundedCornerShape(10.dp)).background(Color(0xFF8CB3CE)))
+            }
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(if (isBus) 5 else if (isVan) 3 else 2) {
+                        Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(5.dp))
+                            .background(Color(0xFF3E6683)))
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50))
+                    .background(Color(0xFFB7C9D8)))
+            }
+            Box(Modifier.width(if (isBus) 15.dp else 23.dp).fillMaxHeight(.72f)
+                .clip(RoundedCornerShape(8.dp)).background(Color(0xFF49677D)))
+        }
+        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth(if (isBus) .83f else .64f)
+            .offset(y = (-5).dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            repeat(2) {
+                Box(Modifier.size(if (isBus) 23.dp else 27.dp).clip(CircleShape)
+                    .background(Color(0xFF101A26)).padding(5.dp)
+                    .clip(CircleShape).background(Color(0xFF9BAFBE)))
+            }
+            if (isBus || isVan) {
+                repeat(2) {
+                    Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF101A26))
+                        .padding(4.dp).clip(CircleShape).background(Color(0xFF9BAFBE)))
+                }
+            }
+        }
+        Text(vehicleName, Modifier.align(Alignment.TopCenter).padding(top = 2.dp)
+            .clip(RoundedCornerShape(7.dp)).background(Color(0xFF142B40)).padding(horizontal = 9.dp, vertical = 4.dp),
+            color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
