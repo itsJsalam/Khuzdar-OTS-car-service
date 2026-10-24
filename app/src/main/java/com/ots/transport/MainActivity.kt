@@ -84,6 +84,19 @@ private fun OtsLogo(size: androidx.compose.ui.unit.Dp) {
     )
 }
 
+private fun vehicleTypeFor(passengerSeats: Int, vehicleName: String = ""): String {
+    val name = vehicleName.lowercase()
+    return when {
+        name.contains("bus") -> "Bus"
+        name.contains("coaster") -> "Coaster"
+        name.contains("van") -> "Van"
+        passengerSeats > 25 -> "Bus"
+        passengerSeats > 10 -> "Coaster"
+        passengerSeats > 4 -> "Van"
+        else -> "Car"
+    }
+}
+
 private val sampleRides = listOf(
     Ride("Karachi", "Khuzdar → Karachi", "Tomorrow • 06:30 AM", "Toyota Corolla • White", "Naveed Baloch", 3000, 3, "4.9", "POPULAR"),
     Ride("Quetta", "Khuzdar → Quetta", "Tomorrow • 08:00 AM", "Honda City • Silver", "Rahim Shah", 2500, 2, "4.8", "ON TIME"),
@@ -936,10 +949,11 @@ private fun RidesScreen(
                         tripId = trip.id,
                         totalSeats = trip.totalSeats,
                         pickupPoint = trip.pickupPoint,
+                        vehicleType = vehicleTypeFor(trip.totalSeats),
                         dropoffPoint = trip.dropoffPoint
                     ),
                     onClick = {
-                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", formatTripTime(trip.departureAt, trip.arrivalAt), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id, trip.totalSeats, trip.pickupPoint, trip.dropoffPoint))
+                        onSelect(Ride(trip.destination, "${trip.origin} → ${trip.destination}", formatTripTime(trip.departureAt, trip.arrivalAt), "Verified vehicle", "Approved OTS driver", trip.farePkr, trip.availableSeats, "—", "AVAILABLE", trip.id, trip.totalSeats, trip.pickupPoint, trip.dropoffPoint, vehicleTypeFor(trip.totalSeats)))
                     }
                 )
             }
@@ -1482,11 +1496,11 @@ private fun DriverScreen(
             Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in / Create account") }
         } else if (status == "not_submitted" || status == "unknown" || status == "pending" || status == "rejected") {
             Text(if (status == "rejected") "Correct and resubmit application" else if (status == "pending") "Update pending application" else "Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Register exactly one car. Your driver photo, CNIC document and car photo are uploaded to private storage for administrator review. Use fictional documents while testing.", color = Muted, fontSize = 12.sp)
+            Text("Register exactly one vehicle—car, van, coaster or bus. Your driver photo, CNIC document and vehicle photos are uploaded to private storage for administrator review.", color = Muted, fontSize = 12.sp)
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(if (isUrdu) "پورا قانونی نام" else "Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(if (isUrdu) "فون نمبر" else "Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text(if (isUrdu) "گاڑی بنانے والی کمپنی" else "Car make") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = make, onValueChange = { make = it }, label = { Text(if (isUrdu) "گاڑی بنانے والی کمپنی" else "Vehicle make") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text(if (isUrdu) "ماڈل" else "Model") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1495,7 +1509,7 @@ private fun DriverScreen(
             }
             OutlinedTextField(value = plate, onValueChange = { plate = it.uppercase() }, label = { Text(if (isUrdu) "رجسٹریشن نمبر" else "Registration number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text(if (isUrdu) "مسافروں کی نشستیں" else "Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = seats, onValueChange = { seats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text(if (isUrdu) "مسافروں کی نشستیں" else "Passenger seats (vehicle capacity)") }, modifier = Modifier.weight(1f), singleLine = true)
                 OutlinedTextField(value = luggage, onValueChange = { luggage = it }, label = { Text(if (isUrdu) "سامان کی گنجائش" else "Luggage capacity") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             OutlinedButton(onClick = { driverPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
@@ -1509,7 +1523,7 @@ private fun DriverScreen(
             }
             Button(
                 onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 4, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
-                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..4,
+                enabled = status != "submitting" && name.isNotBlank() && phone.isNotBlank() && make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && driverPhoto != null && cnicDocument != null && vehiclePhotos.isNotEmpty() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..60,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Text(if (isUrdu) { if (status == "submitting") "جمع ہو رہا ہے…" else "منظوری کے لیے جمع کریں" } else { if (status == "submitting") "Submitting…" else "Submit for approval" }) }
@@ -1517,7 +1531,7 @@ private fun DriverScreen(
             if (vehicle != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("YOUR REGISTERED CAR", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("YOUR REGISTERED VEHICLE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Text("${vehicle.make} ${vehicle.model} • ${vehicle.year}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text("Registration: ${vehicle.registration} • ${vehicle.seats} passenger seats", color = Muted, fontSize = 11.sp)
                         OutlinedButton(onClick = {
@@ -1530,7 +1544,7 @@ private fun DriverScreen(
                 }
             }
             Text(if (isUrdu) "سفر شائع کریں" else "Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Your approved car will be used for every route. You can publish multiple trips with different schedules.", color = Muted, fontSize = 12.sp)
+            Text("Your one approved vehicle is used for every route. Match each trip’s passenger-seat count to the registered vehicle capacity.", color = Muted, fontSize = 12.sp)
             Text(if (isUrdu) "منزل" else "Destination", color = Ink, fontWeight = FontWeight.Bold)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("Karachi", "Quetta", "Larkana", "Gwadar", "Turbat", "Ratto Dero").forEach { city ->
@@ -1553,11 +1567,11 @@ private fun DriverScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 OutlinedTextField(value = tripFare, onValueChange = { tripFare = it.filter { c -> c.isDigit() }.take(7) }, label = { Text(if (isUrdu) "فی نشست کرایہ (PKR)" else "Fare per seat (PKR)") }, modifier = Modifier.weight(1f), singleLine = true)
-                OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
+                OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats (max ${vehicle?.seats ?: 60})") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Button(
                 onClick = { showPublishReview = true },
-                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (estimatedArrival.isBlank() || estimatedArrival.length == 16) && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..4,
+                enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (estimatedArrival.isBlank() || estimatedArrival.length == 16) && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..(vehicle?.seats ?: 60),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
             ) { Icon(Icons.Default.Publish, null); Spacer(Modifier.width(8.dp)); Text("Publish trip") }
@@ -1612,7 +1626,7 @@ private fun DriverScreen(
                     Text("Estimated arrival: ${estimatedArrival.ifBlank { "Not provided" }}", color = Muted, fontSize = 12.sp)
                     HorizontalDivider()
                     Text("Fare per passenger: PKR ${tripFare.toIntOrNull() ?: 0}", color = Ink, fontWeight = FontWeight.Bold)
-                    Text("Passenger seats: ${tripSeats.toIntOrNull() ?: 0} (driver seat is never bookable)", color = Ink, fontWeight = FontWeight.SemiBold)
+                    Text("Vehicle type: ${vehicleTypeFor(tripSeats.toIntOrNull() ?: 0)} • Passenger seats: ${tripSeats.toIntOrNull() ?: 0} (driver seat excluded)", color = Ink, fontWeight = FontWeight.SemiBold)
                     Text("Publishing is still subject to server-side driver approval, document validity and operational freeze checks.", color = Color(0xFF8B5A18), fontSize = 11.sp)
                 }
             },
