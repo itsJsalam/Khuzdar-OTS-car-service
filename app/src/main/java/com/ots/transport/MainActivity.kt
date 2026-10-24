@@ -1365,6 +1365,7 @@ private fun DriverScreen(
     var tripFare by remember { mutableStateOf("") }
     var tripSeats by remember { mutableStateOf("4") }
     var cancelCandidate by remember { mutableStateOf<SupabaseApi.Trip?>(null) }
+    var showPublishReview by remember { mutableStateOf(false) }
     var editVehicle by remember { mutableStateOf<SupabaseApi.Vehicle?>(null) }
     var replacementVehiclePhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val editVehiclePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { replacementVehiclePhotos = it.take(5) }
@@ -1489,7 +1490,7 @@ private fun DriverScreen(
                 OutlinedTextField(value = tripSeats, onValueChange = { tripSeats = it.filter { c -> c.isDigit() }.take(2) }, label = { Text("Passenger seats (max 4)") }, modifier = Modifier.weight(1f), singleLine = true)
             }
             Button(
-                onClick = { onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, estimatedArrival, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0) },
+                onClick = { showPublishReview = true },
                 enabled = pickupPoint.isNotBlank() && dropoffPoint.isNotBlank() && departureDate.length == 10 && departureTime.length == 5 && (estimatedArrival.isBlank() || estimatedArrival.length == 16) && (tripFare.toIntOrNull() ?: 0) > 0 && (tripSeats.toIntOrNull() ?: 0) in 1..4,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink)
@@ -1528,6 +1529,41 @@ private fun DriverScreen(
             }
         }
     }
+    if (showPublishReview) {
+        AlertDialog(
+            onDismissRequest = { showPublishReview = false },
+            title = { Text(if (isUrdu) "سفر شائع کرنے سے پہلے جائزہ" else "Review trip before publishing") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(if (isUrdu) "گاڑی" else "APPROVED VEHICLE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(vehicle?.let { "${it.make} ${it.model} • ${it.registration}" } ?: "Approved vehicle", color = Ink, fontWeight = FontWeight.Bold)
+                    HorizontalDivider()
+                    Text(if (isUrdu) "راستہ" else "ROUTE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("$pickupPoint → $dropoffPoint", color = Ink, fontWeight = FontWeight.Bold)
+                    Text("Destination: $destination", color = Muted, fontSize = 12.sp)
+                    Text(if (isUrdu) "روانگی" else "DEPARTURE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("$departureDate • $departureTime", color = Ink, fontWeight = FontWeight.SemiBold)
+                    Text("Estimated arrival: ${estimatedArrival.ifBlank { "Not provided" }}", color = Muted, fontSize = 12.sp)
+                    HorizontalDivider()
+                    Text("Fare per passenger: PKR ${tripFare.toIntOrNull() ?: 0}", color = Ink, fontWeight = FontWeight.Bold)
+                    Text("Passenger seats: ${tripSeats.toIntOrNull() ?: 0} (driver seat is never bookable)", color = Ink, fontWeight = FontWeight.SemiBold)
+                    Text("Publishing is still subject to server-side driver approval, document validity and operational freeze checks.", color = Color(0xFF8B5A18), fontSize = 11.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPublishReview = false
+                        onPublishTrip(destination, pickupPoint, dropoffPoint, departureDate, departureTime, estimatedArrival, tripFare.toIntOrNull() ?: 0, tripSeats.toIntOrNull() ?: 0)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink)
+                ) { Text(if (isUrdu) "تصدیق کریں اور شائع کریں" else "Confirm & publish") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPublishReview = false }) { Text(if (isUrdu) "واپس ترمیم کریں" else "Back to edit") }
+            }
+        )
+    }
     if (editVehicle != null) {
         AlertDialog(
             onDismissRequest = { editVehicle = null },
@@ -1549,8 +1585,8 @@ private fun DriverScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..20,
-                    onClick = { editVehicle?.let { onUpdateVehicle(it, make, model, year.toIntOrNull() ?: 2020, plate, color, seats.toIntOrNull() ?: 3, luggage, replacementVehiclePhotos) }; editVehicle = null },
+                    enabled = make.isNotBlank() && model.isNotBlank() && plate.isNotBlank() && (year.toIntOrNull() ?: 0) in 1980..2100 && (seats.toIntOrNull() ?: 0) in 1..4,
+                    onClick = { editVehicle?.let { onUpdateVehicle(it, make, model, year.toIntOrNull() ?: 2020, plate, color, seats.toIntOrNull() ?: 4, luggage, replacementVehiclePhotos) }; editVehicle = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Ink)
                 ) { Text("Submit for reapproval") }
             },
