@@ -1304,19 +1304,19 @@ private fun BookingsScreen(
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Person, null, tint = Navy2, modifier = Modifier.size(40.dp))
-                    Text("Sign in to see your tickets", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Button(onClick = onLogin, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in") }
+                    Text(if (isUrdu) "اپنے ٹکٹ دیکھنے کے لیے سائن اِن کریں" else "Sign in to see your tickets", color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Button(onClick = onLogin, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "سائن اِن" else "Sign in") }
                 }
             }
         } else if (loading) {
-            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(9.dp)); Text("Loading your bookings…", color = Muted, fontSize = 12.sp) }
+            Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(9.dp)); Text(if (isUrdu) "آپ کی بکنگز لوڈ ہو رہی ہیں…" else "Loading your bookings…", color = Muted, fontSize = 12.sp) }
         } else if (bookings.isEmpty()) {
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Luggage, null, tint = Navy2, modifier = Modifier.size(48.dp))
-                    Text(if (error.isBlank()) "No bookings yet" else "Unable to load bookings", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(if (error.isBlank()) "Your confirmed OTS tickets will appear here after you book a published trip." else error, color = Muted, fontSize = 12.sp)
-                    Button(onClick = onBrowse, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Find a ride") }
+                    Text(if (error.isBlank()) { if (isUrdu) "ابھی کوئی بکنگ نہیں" else "No bookings yet" } else { if (isUrdu) "بکنگز لوڈ نہیں ہو سکیں" else "Unable to load bookings" }, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(if (error.isBlank()) { if (isUrdu) "شائع شدہ سفر بک کرنے کے بعد آپ کے تصدیق شدہ ٹکٹ یہاں دکھائی دیں گے۔" else "Your confirmed OTS tickets will appear here after you book a published trip." } else error, color = Muted, fontSize = 12.sp)
+                    Button(onClick = onBrowse, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "سفر تلاش کریں" else "Find a ride") }
                 }
             }
         } else {
