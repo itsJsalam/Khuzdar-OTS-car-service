@@ -743,7 +743,7 @@ private fun SettingsScreen(
                 }
             }
         }
-        Text(if (isUrdu) "کسٹمر بونس اور وفاداری کے فوائد بعد میں شامل کیے جا سکتے ہیں۔" else "Customer bonuses and loyalty benefits can be added in a later update.", color = Muted, fontSize = 11.sp)
+        Text(if (isUrdu) "OTS Transport • محفوظ اور آسان انٹر سٹی سفر" else "OTS Transport • Your intercity journey, thoughtfully connected", color = Muted, fontSize = 11.sp)
     }
 }
 
@@ -856,8 +856,8 @@ private fun HomeScreen(isUrdu: Boolean, role: String, onRole: (String) -> Unit, 
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.QrCode2, null, tint = Color.White, modifier = Modifier.size(30.dp))
                         }
-                        Text(if (isUrdu) "سفر تلاش کریں" else "Scan Karo\nBook Karo", color = Color.White, fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(if (isUrdu) "جلدی سے نشست بک کریں" else "Compare available vehicles and seats", color = Color(0xFFDDE8FF), fontSize = 11.sp)
+                        Text(if (isUrdu) "سفر تلاش کریں" else "Find Your\nRide", color = Color.White, fontSize = 21.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isUrdu) "جلدی سے نشست بک کریں" else "Compare cars, vans, coasters and buses", color = Color(0xFFDDE8FF), fontSize = 11.sp)
                     }
                 }
                 Card(
