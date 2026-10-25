@@ -970,13 +970,13 @@ private fun RidesScreen(
                 Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
                     Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Icon(Icons.Default.Route, null, tint = Navy2, modifier = Modifier.size(34.dp))
-                        Text(if (error.isBlank()) "No trips available yet" else "Trips could not be loaded", color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                        Text(if (error.isBlank()) "There are no published trips for this route right now. Please check again later." else error, color = Muted, fontSize = 12.sp)
+                        Text(if (error.isBlank()) { if (isUrdu) "ابھی کوئی سفر دستیاب نہیں" else "No journeys available yet" } else { if (isUrdu) "سفر لوڈ نہیں ہو سکے" else "We couldn’t load journeys" }, color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(if (error.isBlank()) { if (isUrdu) "اس راستے کے لیے ابھی سفر شائع نہیں ہوا۔ بعد میں دوبارہ دیکھیں۔" else "No trips are published for this route right now. Try another destination or check again later." } else error, color = Muted, fontSize = 12.sp)
                     }
                 }
             }
         }
-        Text("Trips, prices and available seats are read from the shared OTS database.", color = Muted, fontSize = 11.sp)
+        Text(if (isUrdu) "کرایہ اور نشستوں کی دستیابی سفر کی معلومات کے مطابق دکھائی جاتی ہے۔" else "Fares and seat availability are shown from each trip’s published details.", color = Muted, fontSize = 11.sp)
     }
 }
 
