@@ -470,8 +470,8 @@ private fun OTSApp(
                             } else {
                                 scope.launch {
                                     try {
-                                        val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your car has not been approved yet.")
-                                        if (seats > vehicle.passengerSeats) throw IllegalStateException("This car is approved for only ${vehicle.passengerSeats} passenger seats.")
+                                        val vehicle = SupabaseApi.getApprovedVehicle(active) ?: throw IllegalStateException("Your registered vehicle has not been approved yet.")
+                                        if (seats > vehicle.passengerSeats) throw IllegalStateException("This vehicle is approved for only ${vehicle.passengerSeats} passenger seats.")
                                         val tripId = SupabaseApi.publishTrip(active, vehicle.id, destination, pickup, dropoff, departure, arrival, fare, seats)
                                         notice = "Trip published successfully. Reference: " + tripId.take(8).uppercase()
                                         try { driverTrips = SupabaseApi.getDriverTrips(active) } catch (_: Exception) { }
@@ -492,7 +492,7 @@ private fun OTSApp(
                                     try {
                                         SupabaseApi.submitDriverApplication(active, name, phone, make, model, year, plate, color, seats, "Car", luggageCapacity, appContext, driverPhoto, cnicDocument, vehiclePhotos)
                                         driverStatus = "pending"
-                                        notice = "Your driver and one-car application has been submitted. You cannot publish trips until the administrator approves it."
+                                        notice = "Your driver and single-vehicle application has been submitted. You cannot publish trips until the administrator approves it."
                                     } catch (e: Exception) {
                                         driverStatus = "not_submitted"
                                         notice = e.message ?: "The application could not be submitted. Please check your connection and try again."
@@ -1483,7 +1483,7 @@ private fun DriverScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             OtsLogo(38.dp)
             Spacer(Modifier.width(10.dp))
-            Column { Text(if (isUrdu) "ڈرائیور مرکز" else "Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "ایک رجسٹرڈ گاڑی • متعدد راستے" else "One registered car • multiple routes", color = Muted, fontSize = 12.sp) }
+            Column { Text(if (isUrdu) "ڈرائیور مرکز" else "Driver centre", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold); Text(if (isUrdu) "ایک رجسٹرڈ گاڑی • متعدد راستے" else "One registered vehicle • multiple routes", color = Muted, fontSize = 12.sp) }
         }
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1497,7 +1497,7 @@ private fun DriverScreen(
                     "unknown" -> "Unable to check status. Try again when connected."
                     else -> "Not registered as a driver yet."
                 }, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(if (isUrdu) "ایڈمن کی منظوری تک سفر شائع نہیں کیے جا سکتے۔" else "Trips stay locked until an administrator approves your driver application and car.", color = Color(0xFFB9CBD9), fontSize = 11.sp)
+                Text(if (isUrdu) "ایڈمن کی منظوری تک سفر شائع نہیں کیے جا سکتے۔" else "Trips stay locked until an administrator approves your driver application and registered vehicle.", color = Color(0xFFB9CBD9), fontSize = 11.sp)
             }
         }
         if (session == null) {
@@ -1528,7 +1528,7 @@ private fun DriverScreen(
                 Icon(Icons.Default.Badge, null); Spacer(Modifier.width(8.dp)); Text(if (cnicDocument == null) { if (isUrdu) "شناختی کارڈ کی تصویر / PDF منتخب کریں" else "Choose CNIC image / PDF" } else if (isUrdu) "شناختی دستاویز منتخب ہو گئی" else "CNIC document selected")
             }
             OutlinedButton(onClick = { vehiclePhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) { if (isUrdu) "گاڑی کی تصاویر منتخب کریں (زیادہ سے زیادہ ۵)" else "Choose car photos (up to 5)" } else if (isUrdu) "${vehiclePhotos.size} تصاویر منتخب ہوئیں" else "${vehiclePhotos.size} car photos selected")
+                Icon(Icons.Default.DirectionsCar, null); Spacer(Modifier.width(8.dp)); Text(if (vehiclePhotos.isEmpty()) { if (isUrdu) "گاڑی کی تصاویر منتخب کریں (زیادہ سے زیادہ ۵)" else "Choose vehicle photos (up to 5)" } else if (isUrdu) "${vehiclePhotos.size} تصاویر منتخب ہوئیں" else "${vehiclePhotos.size} vehicle photos selected")
             }
             Button(
                 onClick = { onSubmit(name, phone, year.toIntOrNull() ?: 2020, make, model, plate, seats.toIntOrNull() ?: 4, color, luggage, driverPhoto, cnicDocument, vehiclePhotos) },
