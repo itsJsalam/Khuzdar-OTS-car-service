@@ -1727,13 +1727,13 @@ private fun ProfileScreen(isUrdu: Boolean, role: String, onRole: (String) -> Uni
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(22.dp)) {
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 OtsLogo(58.dp)
-                Spacer(Modifier.width(12.dp)); Column { Text("Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text(if (signedIn) email else "Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
+                Spacer(Modifier.width(12.dp)); Column { Text(if (isUrdu) "آپ کا OTS اکاؤنٹ" else "Your OTS account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp); Text(if (signedIn) email else if (isUrdu) "اپنے سفر منظم کرنے کے لیے سائن اِن کریں" else "Sign in to manage your journeys", color = Color(0xFFB9CBD9), fontSize = 11.sp) }
             }
         }
-        Text("Current mode", color = Ink, fontWeight = FontWeight.Bold)
-        listOf("Passenger", "Driver").forEach { FilterChip(selected = role == it, onClick = { onRole(it) }, label = { Text(it) }) }
-        if (signedIn) { Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out") } } else { Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text("Sign in / Create account") } }
-        Text("Identity documents and payment details are not collected on this screen. Secure document upload and paid payment services will be added only when configured.", color = Muted, fontSize = 11.sp)
+        Text(if (isUrdu) "موجودہ موڈ" else "Current mode", color = Ink, fontWeight = FontWeight.Bold)
+        listOf("Passenger", "Driver").forEach { mode -> FilterChip(selected = role == mode, onClick = { onRole(mode) }, label = { Text(if (isUrdu && mode == "Passenger") "مسافر" else if (isUrdu) "ڈرائیور" else mode) }) }
+        if (signedIn) { Button(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "سائن آؤٹ" else "Sign out") } } else { Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Icon(Icons.Default.PhoneAndroid, null); Spacer(Modifier.width(8.dp)); Text(if (isUrdu) "سائن اِن / اکاؤنٹ بنائیں" else "Sign in / Create account") } }
+        Text(if (isUrdu) "شناختی دستاویزات اور ادائیگی کی تفصیلات اس اسکرین پر جمع نہیں کی جاتیں۔" else "Identity documents and payment details are not collected on this screen.", color = Muted, fontSize = 11.sp)
         Text("Version 1.0 • OTS Transport", color = Muted, fontSize = 11.sp)
     }
 }
