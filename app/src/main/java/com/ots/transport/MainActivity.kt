@@ -1163,7 +1163,7 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                     Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF2B8B7F))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "دستیاب" else "Available", color = Color.White, fontSize = 9.sp) }
                     Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF536273))); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "بک" else "Full", color = Color.White, fontSize = 9.sp) }
                 }
-                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی۔ دستیابی بکنگ کے وقت تصدیق ہوتی ہے۔" else "The driver seat cannot be booked. Seat availability is checked when you confirm.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+                Text(if (isUrdu) "ڈرائیور کی نشست بک نہیں ہو سکتی۔ دستیابی بکنگ کے وقت تصدیق ہوتی ہے۔" else "Only passenger seats can be selected. Seat availability must be confirmed when you book.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
             }
         }
         Text(if (isUrdu) "پک اَپ اور منزل" else "Pickup and drop-off", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -1183,7 +1183,7 @@ private fun SeatScreen(isUrdu: Boolean, ride: Ride, seat: String, onSeat: (Strin
                 Button(onClick = onBook, shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text(if (isUrdu) "ابھی بک کریں" else "Book now") }
             }
         }
-        Text(if (isUrdu) "سفر سے پہلے ڈرائیور اور گاڑی کی تفصیلات اپنے ٹکٹ سے ملائیں۔" else "Before boarding, compare the driver and car details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
+        Text(if (isUrdu) "سفر سے پہلے ڈرائیور اور گاڑی کی تفصیلات اپنے ٹکٹ سے ملائیں۔" else "Before boarding, match the driver and vehicle details with your ticket.", color = Color(0xFF8B5A18), fontSize = 11.sp)
     }
 }
 
@@ -1505,7 +1505,7 @@ private fun DriverScreen(
             Button(onClick = onLogin, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("Sign in / Create account") }
         } else if (status == "not_submitted" || status == "unknown" || status == "pending" || status == "rejected") {
             Text(if (status == "rejected") "Correct and resubmit application" else if (status == "pending") "Update pending application" else "Driver and vehicle application", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Register exactly one vehicle—car, van, coaster or bus. Your driver photo, CNIC document and vehicle photos are uploaded to private storage for administrator review.", color = Muted, fontSize = 12.sp)
+            Text("Register exactly one vehicle—car, van, coaster or bus. Add your driver photo, CNIC document and clear vehicle photos for administrator review.", color = Muted, fontSize = 12.sp)
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(if (isUrdu) "پورا قانونی نام" else "Full legal name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(if (isUrdu) "فون نمبر" else "Phone number") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1553,7 +1553,7 @@ private fun DriverScreen(
                 }
             }
             Text(if (isUrdu) "سفر شائع کریں" else "Publish a trip", color = Ink, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Your one approved vehicle is used for every route. Match each trip’s passenger-seat count to the registered vehicle capacity.", color = Muted, fontSize = 12.sp)
+            Text("Your single approved vehicle is used for every route. Set each trip’s passenger-seat count within its approved capacity.", color = Muted, fontSize = 12.sp)
             Text(if (isUrdu) "منزل" else "Destination", color = Ink, fontWeight = FontWeight.Bold)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 listOf("Karachi", "Quetta", "Larkana", "Gwadar", "Turbat", "Ratto Dero").forEach { city ->
