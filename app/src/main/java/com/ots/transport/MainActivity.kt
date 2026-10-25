@@ -1356,31 +1356,31 @@ private fun TicketScreen(isUrdu: Boolean, ride: Ride, seat: String, fare: Int, r
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OtsLogo(42.dp)
-                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text("DIGITAL BOOKING TICKET", color = Muted, fontSize = 9.sp) }
+                    Spacer(Modifier.width(10.dp)); Column { Text("OTS TRANSPORT", color = Ink, fontWeight = FontWeight.Black, letterSpacing = 1.sp); Text(if (isUrdu) "ڈیجیٹل بکنگ ٹکٹ" else "DIGITAL BOOKING TICKET", color = Muted, fontSize = 9.sp) }
                     Spacer(Modifier.weight(1f)); Icon(Icons.Default.Verified, null, tint = Color(0xFF159C7B))
                 }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
                 Text("BOOKING REF  " + reference.take(12).uppercase(), color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 BookingQrCode(reference = reference)
-                Text("Booking reference QR • OTS staff must verify your ticket", color = Muted, fontSize = 10.sp)
+                Text(if (isUrdu) "بکنگ QR • OTS عملہ ٹکٹ کی تصدیق کرے گا" else "Booking QR • OTS staff must verify your ticket", color = Muted, fontSize = 10.sp)
                 Text(ride.route, color = Ink, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
                 Text(ride.time, color = Muted, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail("SEAT", seat); TicketDetail("DRIVER", ride.driver); TicketDetail("FARE", "PKR $fare") }
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) { TicketDetail(if (isUrdu) "نشست" else "SEAT", seat); TicketDetail(if (isUrdu) "ڈرائیور" else "DRIVER", ride.driver); TicketDetail(if (isUrdu) "کرایہ" else "FARE", "PKR $fare") }
                 HorizontalDivider(color = Color(0xFFE2E8EE))
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Info, null, tint = Color(0xFF16876E)); Spacer(Modifier.width(7.dp)); Text("Keep this booking reference for your journey.", color = Color(0xFF16876E), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Info, null, tint = Color(0xFF16876E)); Spacer(Modifier.width(7.dp)); Text(if (isUrdu) "سفر کے لیے یہ بکنگ ریفرنس محفوظ رکھیں۔" else "Keep this booking reference for your journey.", color = Color(0xFF16876E), fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                 Text("Booking reference: " + reference, color = Muted, fontSize = 11.sp)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = onShareLocation, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
-                Icon(Icons.Default.Share, null); Spacer(Modifier.width(5.dp)); Text("Share location", fontSize = 11.sp)
+                Icon(Icons.Default.Share, null); Spacer(Modifier.width(5.dp)); Text(if (isUrdu) "لوکیشن شیئر کریں" else "Share location", fontSize = 11.sp)
             }
             Button(onClick = onSos, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB42318))) {
                 Icon(Icons.Default.Call, null); Spacer(Modifier.width(5.dp)); Text("SOS • 1122", fontSize = 11.sp)
             }
         }
-        Text("Location sharing uses your last known location if permission is granted. SOS opens the phone dialer; it does not call automatically.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)) { Text("Done", fontWeight = FontWeight.Bold) }
+        Text(if (isUrdu) "اجازت ہونے پر آخری معلوم لوکیشن شیئر ہوگی۔ SOS فون ڈائلر کھولتا ہے، خودکار کال نہیں کرتا۔" else "Location sharing uses your last known location if permission is granted. SOS opens the phone dialer; it does not call automatically.", color = Color(0xFFB8C9D7), fontSize = 10.sp)
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink)) { Text(if (isUrdu) "مکمل" else "Done", fontWeight = FontWeight.Bold) }
     }
 }
 
